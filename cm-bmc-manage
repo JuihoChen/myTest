@@ -1,0 +1,444 @@
+#!/cm/local/apps/python3/bin/python
+#
+# Test script to work with BMC
+#
+# CMD_HOSTNAME=node001 CMD_BMCIP=... CMD_BMCUSERNAME=... CMD_BMCPASSWORD=... CMD_BMCTYPE=ipmi cm-bmc-manage --identify
+#
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import time
+from datetime import datetime
+
+import requests
+import urllib3
+
+urllib3.disable_warnings()
+
+
+class Node:
+    def __init__(self):
+        self.hostname = os.environ.get('CMD_HOSTNAME', None)
+        self.ip = os.environ.get('CMD_BMCIP', None)
+        self.username = os.environ.get('CMD_BMCUSERNAME', None)
+        self.password = os.environ.get('CMD_BMCPASSWORD', None)
+        self.bmc_type = os.environ.get("CMD_BMC_FIRMWARE_MANAGE_MODE", os.environ.get('CMD_BMCTYPE', None))
+        if bool(self.bmc_type):
+            self.bmc_type = self.bmc_type.lower()
+
+    @property
+    def valid(self):
+        return (
+            bool(self.hostname)
+            and bool(self.ip)
+            and bool(self.username)
+            and bool(self.password)
+            and bool(self.bmc_type)
+        )
+
+
+class BMC:
+    def __init__(self, debug: bool = False):
+        self.debug = debug
+        self.path = '/cm/local/apps/freeipmi/current'
+        self.timeout = os.environ.get('CMD_BMC_SESSION_TIMEOUT', 2000)  # ms
+
+    def log(self, message: str):
+        if self.debug:
+            sys.stderr.write(f'{message}\n')
+
+    def _build_cmd(
+        self,
+        node: Node,
+        operation: str | list,
+        command: str = 'ipmi-chassis',
+    ):
+        cmd = [
+            f'{self.path}/{command}',
+            f'--hostname={node.ip}',
+            f'--username={node.username}',
+            f'--password={node.password}',
+            '--driver-type=LAN_2_0',
+            '--workaround-flags=authcap',
+            f'--session-timeout={self.timeout}',
+        ]
+        if isinstance(operation, list):
+            cmd += operation
+        else:
+            cmd.append(operation)
+        return cmd
+
+    def _run(self, cmd: list):
+        self.log(f'Run: {" ".join(cmd)}')  # KDR: shows password
+        process = subprocess.Popen(
+            cmd,
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf-8",
+        )
+        self.stdout, self.stderr = process.communicate()
+        exit_code = process.wait()
+        self.log(f'Exit code: {exit_code}')
+        return exit_code == 0
+
+    def _redfish(self, node: Node, path: str) -> list[dict]:
+        result = requests.get(f"https://{node.ip}/redfish/v1/{path}", auth=(node.username, node.password), verify=False)
+        try:
+            return json.loads(result.text)
+        except Exception as e:
+            self.log(f"Unable to parse JSON: {e}")
+        return []
+
+    def _find_command_failed(self):
+        self.stdout = self.stdout.lower()
+        for failure in [
+            'connection timeout',
+            'username invalid',
+            'password invalid',
+            'password verification timeout',
+        ]:
+            if failure in self.stdout:
+                return {'success': False, 'information': failure}
+        return {'success': True}
+
+    def identify(self, node: Node):
+        if self._run(self._build_cmd(node, '--chassis-identify=FORCE')):
+            return self._find_command_failed()
+        return {'success': False, 'information': self.stderr}
+
+    def unidentify(self, node: Node):
+        if self._run(self._build_cmd(node, '--chassis-identify=TURN-OFF')):
+            return self._find_command_failed()
+        return {'success': False, 'information': self.stderr}
+
+    def is_identified(self, node: Node):
+        if self._run(self._build_cmd(node, '--get-chassis-status')):
+            stdout = self.stdout.lower()
+            find = stdout.find('chassis identify state')
+            if find > 0:
+                on = stdout.find('on', find)
+                off = stdout.find('off', find)
+                if on > 0 and on < off:
+                    return {'identified': True}
+                elif off > 0:
+                    return {'identified': False}
+            return {'identified': 'undefined', 'information': self.stdout}
+        return {'identified': 'undefined', 'information': self.stderr}
+
+    def __parse_one_event(self, words: list):
+        return {
+            'timestamp': int(datetime.strptime(f'{words[1]} {words[2]}', '%b-%d-%Y %H:%M:%S').timestamp()),
+            'id': words[0],
+            'name': words[3],
+            'type': words[4],
+            'event': words[5],
+        }
+
+    def event_logs(self, node: Node, tail: int = 100) -> list[dict]:
+        if os.environ.get("CMD_BMCTYPE", "").upper() == "REDFISH":
+            events = self._redfish(node, "Systems/System_0/LogServices/EventLog/Entries").get("Members", [])
+            self.log(f'Redfish events for {node.hostname}: {len(events)}')
+            events = [
+                {
+                    'timestamp': event.get("Created", ""),
+                    'id': event.get("Id", ""),
+                    'type': event.get("EntityType", ""),
+                    'message': event.get("Message", ""),
+                    'severity': event.get("Severity", ""),
+                }
+                for event in events
+                if not event.get("Resolved", False)
+            ]
+            self.log(f'Redfish unresolved events for {node.hostname}: {len(events)}')
+        elif self._run(
+            self._build_cmd(
+                node,
+                ['--comma-separated-output', '--no-header-output', f'--tail={tail}'],
+                'ipmi-sel',
+            )
+        ):
+            events = [self.__parse_one_event(it.split(',')) for it in self.stdout.split('\n') if bool(it)]
+            self.log(f'Ipmi events for {node.hostname}: {len(events)}')
+        else:
+            events = []
+        if len(events) > tail:
+            events = events[-tail:]
+        return events
+
+    def clear_event_logs(self, node: Node) -> dict:
+        bmc_type = os.environ.get("CMD_BMCTYPE", "").lower()
+        if bmc_type == "redfish":
+            result = requests.post(
+                f"https://{node.ip}/redfish/v1/Systems/System_0/LogServices/EventLog/Actions/LogService.ClearLog",
+                auth=(node.username, node.password),
+                verify=False
+            )
+            if result.ok:
+                return {"success": True}
+            return {"success": False, "message": f"failed: {result.reason}"}
+        return {"success": False, "message": f"not supported: {bmc_type}"}
+
+    def leaks(self, node: Node, tail: int = 100):
+        return []
+
+    def reset(self, node: Node):
+        # TODO
+        return {'success': False, 'message': 'TODO'}
+
+    def save(self):
+        pass
+
+
+class FakeBMC(BMC):
+    def __init__(
+        self,
+        filename: str = '/tmp/bmc.json',
+        debug: bool = False,
+    ):
+        super().__init__(debug)
+        self.filename = filename
+        self.status = None
+        self.load()
+
+    def load(self):
+        try:
+            with open(self.filename) as fd:
+                self.status = json.load(fd)
+            self.log(f'Loaded: {self.filename}')
+        except Exception as e:
+            self.status = {}
+            self.log(f'Failed to load: {self.filename}, error: {e}')
+
+    def save(self):
+        with open(self.filename, 'w') as fd:
+            fd.write(json.dumps(self.status, indent=2))
+        self.log(f'Written: {self.filename}')
+
+    def identify(self, node: Node):
+        if node.hostname not in self.status:
+            self.status[node.hostname] = {'identified': True, 'log': []}
+        else:
+            self.status[node.hostname]['identified'] = True
+        self.log(f'Identify node: {node.hostname}')
+        self.status[node.hostname]['log'].append(self._create_log('identify'))
+        return {'success': True}
+
+    def unidentify(self, node: Node):
+        if node.hostname not in self.status:
+            self.status[node.hostname] = {'identified': False, 'log': []}
+        else:
+            self.status[node.hostname]['identified'] = False
+        self.log(f'Unidentify node: {node.hostname}')
+        self.status[node.hostname]['log'].append(self._create_log('unidentify'))
+        return {'success': True}
+
+    def is_identified(self, node: Node):
+        status = self.status.get(node.hostname, None)
+        if status is None:
+            self.log(f'Identify for unknown node: {node.hostname}')
+            return False
+        self.log(f'Identify for node: {node.hostname}')
+        return {'identified': status['identified']}
+
+    def event_logs(self, node: Node, tail: int = 100):
+        status = self.status.get(node.hostname, None)
+        if status is None:
+            return []
+        self.log(f'Event log for node: {node.hostname}')
+        first = max(0, len(status['log']) - 100)
+        return status['log'][first:]
+
+    def reset(self, node: Node):
+        if node.hostname not in self.status:
+            self.status[node.hostname] = {'identified': False, 'log': []}
+        self.log(f'Reset node: {node.hostname}')
+        self.status[node.hostname]['log'] = [self._create_log('reset')]
+        return {'success': True}
+
+    def _create_log(self, message: str):
+        return {
+            'timestamp': int(time.time()),
+            'id': 'fake',
+            'name': 'fake name',
+            'type': 'fake type',
+            'event': message,
+        }
+
+
+class ExternalScript(BMC):
+    def __init__(self, script: str, debug: bool = False):
+        super().__init__(debug)
+        self.script = script
+
+    def identify(self, node: Node) -> dict:
+        return {'success': False}
+
+    def unidentify(self, node: Node) -> dict:
+        return {'success': False}
+
+    def is_identified(self, node: Node) -> dict:
+        return {'success': False}
+
+    def reset(self, node: Node):
+        self.log(f'Reset node: {node.hostname}')
+        success = self._run([self.script, "--reset-bmc"])
+        return {'success': success}
+
+
+class H100(ExternalScript):
+    def __init__(self, debug: bool = False):
+        super().__init__("/cm/local/apps/cm-bios-tools/python/cm-h100-firmware-manage", debug)
+
+
+class B200(ExternalScript):
+    def __init__(self, debug: bool = False):
+        super().__init__("/cm/local/apps/cm-bios-tools/python/cm-b200-firmware-manage", debug)
+
+
+class GH200(ExternalScript):
+    def __init__(self, debug: bool = False):
+        super().__init__("/cm/local/apps/cm-bios-tools/python/cm-gh200-firmware-manage", debug)
+
+
+class GB200(ExternalScript):
+    def __init__(self, debug: bool = False):
+        super().__init__("/cm/local/apps/cm-bios-tools/python/cm-gb200-firmware-manage", debug)
+
+
+class GB200SW(ExternalScript):
+    def __init__(self, debug: bool = False):
+        super().__init__("/cm/local/apps/cm-bios-tools/python/cm-gb200sw-firmware-manage", debug)
+
+
+class B300(ExternalScript):
+    def __init__(self, debug: bool = False):
+        super().__init__("/cm/local/apps/cm-bios-tools/python/cm-b300-firmware-manage", debug)
+
+
+class GB300(ExternalScript):
+    def __init__(self, debug: bool = False):
+        super().__init__("/cm/local/apps/cm-bios-tools/python/cm-gb300-firmware-manage", debug)
+
+
+class GB300SW(ExternalScript):
+    def __init__(self, debug: bool = False):
+        super().__init__("/cm/local/apps/cm-bios-tools/python/cm-gb300sw-firmware-manage", debug)
+
+
+def setup_parser():
+    parser = argparse.ArgumentParser(
+        description='Manage BMC',
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+
+    def_group = parser.add_mutually_exclusive_group(required=True)
+    def_group.add_argument(
+        '--identify',
+        action='store_true',
+        help='Turn on the BMC light so the node can be identified',
+    )
+    def_group.add_argument(
+        '--unidentify',
+        action='store_true',
+        help='Turn off the BMC light so the node can no longer be identified',
+    )
+    def_group.add_argument(
+        '--is-identified',
+        action='store_true',
+        help='Show the status of the BMC light',
+    )
+    def_group.add_argument(
+        '--event-logs',
+        action='store_true',
+        help='Show the BMC event logs',
+    )
+    def_group.add_argument(
+        '--clear-event-logs',
+        action='store_true',
+        help='Clear the BMC event logs',
+    )
+    def_group.add_argument(
+        '--reset',
+        action='store_true',
+        help='Reset the BMC controller',
+    )
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        help='Debug this script',
+    )
+    parser.add_argument(
+        '--fake',
+        action='store_true',
+        help='Run in fake mode',
+    )
+    parser.add_argument(
+        '--tail',
+        action='store',
+        default=100,
+        type=int,
+        help='Last number of events to retrieve',
+    )
+    return parser
+
+
+def main():
+    parser = setup_parser()
+    args = parser.parse_args()
+
+    if args.debug:
+        sys.stderr.write('Run: ')
+        sys.stderr.write(' '.join(sys.argv))
+        sys.stderr.write('\n')
+
+    node = Node()
+    if node.valid:
+        # TODO: /cm/local/apps/cluster-tools/ext/bin/ucsmanage
+        bmc_types = {
+            'h100': H100,
+            'gh200': GH200,
+            'b200': B200,
+            'gb200': GB200,
+            'gb200sw': GB200,
+            'b300': B300,
+            'gb300': GB300,
+            'gb300sw': GB300,
+        }
+        if args.fake or os.path.exists('/root/.fake.bmc') or os.path.exists('/root/.fake'):
+            bmc = FakeBMC(debug=args.debug)
+        elif node.bmc_type in bmc_types:
+            bmc = bmc_types[node.bmc_type](debug=args.debug)
+        else:
+            bmc = BMC(debug=args.debug)
+
+        if args.identify:
+            result = bmc.identify(node)
+        elif args.unidentify:
+            result = bmc.unidentify(node)
+        elif args.is_identified:
+            result = bmc.is_identified(node)
+        elif args.event_logs:
+            result = bmc.event_logs(node, args.tail)
+        elif args.clear_event_logs:
+            result = bmc.clear_event_logs(node, args.tail)
+        elif args.reset:
+            result = bmc.reset(node)
+        else:
+            parser.print_help()
+            sys.exit(1)
+        bmc.save()
+    else:
+        result = {'success': False, 'information': 'no valid node BMC environment'}
+
+    if args.debug:
+        sys.stderr.write(json.dumps(result))
+    print(json.dumps(result, indent=2))
+
+
+if __name__ == '__main__':
+    main()
