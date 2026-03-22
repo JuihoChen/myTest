@@ -27,3 +27,13 @@ EOF
 
 # Verify
 cat /cm/images/dgx-os73-ubuntu2404-aarch64/root/.ssh/authorized_keys
+
+----------------------------------------------------------------------
+# Push correct key directly via rshell
+cmsh -c "device use node018; \
+  rshell 'echo \"$(cat /root/.ssh/id_ecdsa.pub)\" \
+  >> /root/.ssh/authorized_keys'"
+
+# Verify
+cmsh -c "device use node018; \
+  rshell cat /root/.ssh/authorized_keys"
