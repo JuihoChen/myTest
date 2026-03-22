@@ -1,16 +1,94 @@
-root@node018:~# nvsm show platform
-panic: runtime error: invalid memory address or nil pointer dereference
-[signal SIGSEGV: segmentation violation code=0x1 addr=0x80 pc=0xfffff52db93c]
+[bcm11-headnode->device[node018]]% latesthealthdata
+Measurable                     Parameter        Type         Value      Age        State      Info
+------------------------------ ---------------- ------------ ---------- ---------- ---------- -------------------------------------------
+ManagedServicesOk                               Internal     PASS       3m 31s
+Overall_Health                 /dev/nvme0@nvme  Disk/Smart   PASS       3m 31s
+Overall_Health                 /dev/nvme1@nvme  Disk/Smart   PASS       3m 31s
+Overall_Health                 /dev/nvme2@nvme  Disk/Smart   PASS       3m 31s
+Overall_Health                 /dev/nvme3@nvme  Disk/Smart   PASS       3m 31s
+Overall_Health                 /dev/nvme4@nvme  Disk/Smart   PASS       3m 31s
+Overall_Health                 /dev/nvme5@nvme  Disk/Smart   PASS       3m 31s
+Overall_Health                 /dev/nvme6@nvme  Disk/Smart   PASS       3m 31s
+Overall_Health                 /dev/nvme7@nvme  Disk/Smart   PASS       3m 31s
+Overall_Health                 /dev/nvme8@nvme  Disk/Smart   PASS       3m 31s
+Smart_Health                   /dev/nvme0@nvme  Disk/Smart   PASS       3m 31s
+Smart_Health                   /dev/nvme1@nvme  Disk/Smart   PASS       3m 31s
+Smart_Health                   /dev/nvme2@nvme  Disk/Smart   PASS       3m 31s
+Smart_Health                   /dev/nvme3@nvme  Disk/Smart   PASS       3m 31s
+Smart_Health                   /dev/nvme4@nvme  Disk/Smart   PASS       3m 31s
+Smart_Health                   /dev/nvme5@nvme  Disk/Smart   PASS       3m 31s
+Smart_Health                   /dev/nvme6@nvme  Disk/Smart   PASS       3m 31s
+Smart_Health                   /dev/nvme7@nvme  Disk/Smart   PASS       3m 31s
+Smart_Health                   /dev/nvme8@nvme  Disk/Smart   PASS       3m 31s
+cuda-dcgm                                       OS           PASS       3m 31s
+defaultgateway                                  Network      PASS       2m 48s
+diskspace                                       Disk         PASS       3m 31s
+dmesg                                           OS           PASS       3m 31s
+gpu_health_driver              gpu0             GPU          PASS       3m 31s
+gpu_health_driver              gpu1             GPU          PASS       3m 31s
+gpu_health_driver              gpu2             GPU          PASS       3m 31s
+gpu_health_driver              gpu3             GPU          PASS       3m 31s
+gpu_health_hostengine                           GPU          PASS       3m 31s
+gpu_health_inforom             gpu0             GPU          PASS       3m 31s
+gpu_health_inforom             gpu1             GPU          PASS       3m 31s
+gpu_health_inforom             gpu2             GPU          PASS       3m 31s
+gpu_health_inforom             gpu3             GPU          PASS       3m 31s
+gpu_health_mcu                 gpu0             GPU          PASS       3m 31s
+gpu_health_mcu                 gpu1             GPU          PASS       3m 31s
+gpu_health_mcu                 gpu2             GPU          PASS       3m 31s
+gpu_health_mcu                 gpu3             GPU          PASS       3m 31s
+gpu_health_mem                 gpu0             GPU          PASS       3m 31s
+gpu_health_mem                 gpu1             GPU          PASS       3m 31s
+gpu_health_mem                 gpu2             GPU          PASS       3m 31s
+gpu_health_mem                 gpu3             GPU          PASS       3m 31s
+gpu_health_nvlink              gpu0             GPU          PASS       3m 31s
+gpu_health_nvlink              gpu1             GPU          PASS       3m 31s
+gpu_health_nvlink              gpu2             GPU          PASS       3m 31s
+gpu_health_nvlink              gpu3             GPU          PASS       3m 31s
+gpu_health_nvswitch_fatal      gpu0             GPU          PASS       3m 31s
+gpu_health_nvswitch_fatal      gpu1             GPU          PASS       3m 31s
+gpu_health_nvswitch_fatal      gpu2             GPU          PASS       3m 31s
+gpu_health_nvswitch_fatal      gpu3             GPU          PASS       3m 31s
+gpu_health_nvswitch_non_fatal  gpu0             GPU          PASS       3m 31s
+gpu_health_nvswitch_non_fatal  gpu1             GPU          PASS       3m 31s
+gpu_health_nvswitch_non_fatal  gpu2             GPU          PASS       3m 31s
+gpu_health_nvswitch_non_fatal  gpu3             GPU          PASS       3m 31s
+gpu_health_overall                              GPU          PASS       3m 31s
+gpu_health_overall             gpu0             GPU          PASS       3m 31s
+gpu_health_overall             gpu1             GPU          PASS       3m 31s
+gpu_health_overall             gpu2             GPU          PASS       3m 31s
+gpu_health_overall             gpu3             GPU          PASS       3m 31s
+gpu_health_pcie                gpu0             GPU          PASS       3m 31s
+gpu_health_pcie                gpu1             GPU          PASS       3m 31s
+gpu_health_pcie                gpu2             GPU          PASS       3m 31s
+gpu_health_pcie                gpu3             GPU          PASS       3m 31s
+gpu_health_pmu                 gpu0             GPU          PASS       3m 31s
+gpu_health_pmu                 gpu1             GPU          PASS       3m 31s
+gpu_health_pmu                 gpu2             GPU          PASS       3m 31s
+gpu_health_pmu                 gpu3             GPU          PASS       3m 31s
+gpu_health_power               gpu0             GPU          PASS       3m 31s
+gpu_health_power               gpu1             GPU          PASS       3m 31s
+gpu_health_power               gpu2             GPU          PASS       3m 31s
+gpu_health_power               gpu3             GPU          PASS       3m 31s
+gpu_health_sm                  gpu0             GPU          PASS       3m 31s
+gpu_health_sm                  gpu1             GPU          PASS       3m 31s
+gpu_health_sm                  gpu2             GPU          PASS       3m 31s
+gpu_health_sm                  gpu3             GPU          PASS       3m 31s
+gpu_health_thermal             gpu0             GPU          PASS       3m 31s
+gpu_health_thermal             gpu1             GPU          PASS       3m 31s
+gpu_health_thermal             gpu2             GPU          PASS       3m 31s
+gpu_health_thermal             gpu3             GPU          PASS       3m 31s
+gpu_recovery_check                              GPU          PASS       3m 31s
+interfaces                                      Network      PASS       3m 31s
+ldap                                            OS           PASS       2m 48s
+lustre                                          Disk         PASS       3m 31s
+mounts                                          Disk         PASS       3m 31s
+ntp                                             Internal     PASS       3m 31s                warning: grace period of 900 seconds for t+
+nvsm_pci_health                                 NVSM         UNKNOWN    3m 31s                Error: nvsm-core service is not running
+nvsm_show_health                                NVSM         UNKNOWN    3m 31s                Error: nvsm-core service is not running
+oomkiller                                       OS           PASS       3m 31s
+ssh2node                                        network      PASS       6m 46s                Not UP according to CMDaemon
+swraid                                          Disk         PASS       3m 31s
+[bcm11-headnode->device[node018]]%
 
-goroutine 17 [running, locked to thread]:
-nvsm/lib/core.(*PluginSystemAgent).Init(0x400031a000)
-        /go/src/nvsm/lib/core/system_agent.go:476 +0xec
-nvsm/lib/core.(*NvsmServerImpl).Init(0x40001ec1e0, {0xfffff571dce0?, 0x400043c201?, 0x4000468c48?})
-        /go/src/nvsm/lib/core/nvsm_server_impl.go:114 +0x4d0
-nvsm/lib/core.Init({0xfffff65e0fb0, 0x4}, {0x4000335de8, 0x1, 0x0?})
-        /go/src/nvsm/lib/core/nvsm.go:175 +0x5a0
-main.NvsmInit({0xfffff65e0fb0, 0x4}, {0xb1cbe8, 0x0})
-        /go/src/nvsm/sharedlib/sharedlib.go:77 +0x60
-Aborted (core dumped)
-root@node018:~#
 
