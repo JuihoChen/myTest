@@ -12,3 +12,18 @@ root@bcm11-headnode:~# cat /cm/images/default-image-ubuntu2404-aarch64/root/.ssh
 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBMRACh28M54mqzTYH/9jv6UvNn9CBwMnMNLHBs6YLkVCzSnT2FpPwVR3JRWncyHnlOlgRgVUDLxEX/k9W4MIfMI= root@master
 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBNnmgMr/h+vik6tuMVLwFsOHWfiBLa03ttEtm0XSj87Bg0nRE/2fM7SaNeyR96BAF6bDMc+OuzXqLfzX+soP1Gc= CM slave key, do not remove this!
 root@bcm11-headnode:~#
+
+---------------------------------------------------------------------
+
+# Get current headnode's actual public key
+cat /root/.ssh/id_ecdsa.pub
+
+# Replace authorized_keys in dgx-os73 image
+# Keep CM slave key, replace root@master key
+cat > /cm/images/dgx-os73-ubuntu2404-aarch64/root/.ssh/authorized_keys << EOF
+$(cat /root/.ssh/id_ecdsa.pub)
+ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBKzEfADNdpy4HzxUwuOpBtDET/HRPPpmNc+IY3VJhcJgyOfzt9WqxgXDVFVcznNgFeLS50lIr23OzMys+GQnUkU= CM slave key, do not remove this!
+EOF
+
+# Verify
+cat /cm/images/dgx-os73-ubuntu2404-aarch64/root/.ssh/authorized_keys
