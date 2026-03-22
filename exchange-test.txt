@@ -1,0 +1,14 @@
+root@bcm11-headnode:~# ssh node018
+root@node018's password:
+Permission denied, please try again.
+root@node018's password:
+Permission denied, please try again.
+root@node018's password:
+root@node018: Permission denied (publickey,password).
+root@bcm11-headnode:~# cat /cm/images/dgx-os73-ubuntu2404-aarch64/root/.ssh/authorized_keys
+ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBAQeLJm/hSpoIi6Jhc9b8up0XGrO2fgAY2qjytooainUsFCEAlXDYPA2RWR62YHMyOJeO8mpSuW3jL5eBMPPELw= root@master
+ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBKzEfADNdpy4HzxUwuOpBtDET/HRPPpmNc+IY3VJhcJgyOfzt9WqxgXDVFVcznNgFeLS50lIr23OzMys+GQnUkU= CM slave key, do not remove this!
+root@bcm11-headnode:~# cat /cm/images/default-image-ubuntu2404-aarch64/root/.ssh/authorized_keys
+ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBMRACh28M54mqzTYH/9jv6UvNn9CBwMnMNLHBs6YLkVCzSnT2FpPwVR3JRWncyHnlOlgRgVUDLxEX/k9W4MIfMI= root@master
+ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBNnmgMr/h+vik6tuMVLwFsOHWfiBLa03ttEtm0XSj87Bg0nRE/2fM7SaNeyR96BAF6bDMc+OuzXqLfzX+soP1Gc= CM slave key, do not remove this!
+root@bcm11-headnode:~#
