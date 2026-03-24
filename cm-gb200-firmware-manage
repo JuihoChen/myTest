@@ -1,0 +1,468 @@
+#!/cm/local/apps/python3/bin/python
+#
+# SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+#
+# NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+# property and proprietary rights in and to this material, related
+# documentation and any modifications thereto. Any use, reproduction,
+# disclosure or distribution of this material and related documentation
+# without an express license agreement from NVIDIA CORPORATION or
+# its affiliates is strictly prohibited.
+
+""" Firmware manager script for DGX_GB200 """
+
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import os
+import sys
+from datetime import datetime
+
+from redfish.rest.v1 import (InvalidCredentialsError, RetriesExhaustedError,
+                             ServerDownOrUnreachableError)
+
+sys.path.append("/cm/local/apps/cm-bios-tools/python")
+
+import cmd.env as cmd_env
+
+from nvfw.fwmgr_gb200 import DGX_GB200
+
+PLATFORM_FW_DIR = "gb200"
+BASE_FW_PATH = "/cm/local/apps/cmd/etc/htdocs/bios/firmware"
+DEFAULT_LOCK_PATH = "/var/spool/cmd"
+log_path = "/var/spool/cmd/cm-firmware-manage.log"
+log = logging.getLogger(__name__)
+
+
+def fw_image_dir(path: str) -> str:
+    """ Verify and normalize the image directory path exists. """
+    path = os.path.abspath(os.path.expanduser(path))
+    return path
+
+
+def fw_image_file(filepath: str) -> str:
+    """ Verify and normalize the image file path. """
+    default_path = os.path.join(BASE_FW_PATH, PLATFORM_FW_DIR)
+    filename = os.path.basename(filepath)
+    if not os.path.exists(filepath):
+        # guess the correct filepath based on filename
+        filepath = os.path.join(default_path, filename)
+    return filepath
+
+
+def flash_lock_filename(name: str) -> str:
+    return f'{DEFAULT_LOCK_PATH}/firmware.{name}'
+
+
+def delete_flash_lock(name: str) -> None:
+    try:
+        os.remove(flash_lock_filename(name))
+    except FileNotFoundError as e:
+        pass
+
+
+def read_flash_lock(name: str) -> dict:
+    try:
+        with open(flash_lock_filename(name), 'r') as fd:
+            return json.loads(fd.read())
+    except Exception as e:
+        return {}
+
+
+def write_flash_lock(name: str, contents: dict):
+    """
+    Schema firmware lock file:
+    {
+        "start": "123456789",
+        "image": "nvfw_Grace-Hopperx8_0003_230918.1.0_custom_dbg-signed.fwpkg",
+        "targets": [],
+        "force": True/False
+        "task_uri": "/redfish/v1/TaskService/Tasks/42",
+        "components": [ <component dicts> ]
+        "state": "flashing|completed|pending",
+        "progress": "42",
+        "result": "something happened",
+        "activation": "power-cycle"
+    }
+    """
+    with open(flash_lock_filename(name), 'w') as fd:
+        fd.write(json.dumps(contents, indent=2))
+
+
+def setup_parser():
+    parser = argparse.ArgumentParser(
+        description="Flash/check gb200 firmware",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    parser.add_argument("--debug", help=f"Enable debug log at {log_path}", action="store_true")
+    parser.add_argument("--force", help="Force the firmware update", action="store_true")
+    parser.add_argument("--dryrun", "--dry-run", dest="dryrun", action="store_true",
+                        help="Compare active firmware components to package versions")
+    parser.add_argument("--targets", default=[], help="Flash selected firmware components; "
+                        "See '--info' list of available targets", nargs="+")
+    params = parser.add_mutually_exclusive_group()
+    params.add_argument("--status", help="Get task status", action="store_true")
+    params.add_argument("--flash", type=fw_image_file, help="Upload and Flash firmware")
+    params.add_argument("--info", type=fw_image_dir, help="Show local firmware information for directory")
+    params.add_argument("--make-fake", dest="make_fake", type=fw_image_file,
+                        help=argparse.SUPPRESS) #"Output fake firmware package JSON from PLDM fwpkg file")
+    params.add_argument("--reset-bmc", dest="reset_bmc", action="store_true",
+                        help=argparse.SUPPRESS) #Reset the BMC to apply update")
+    params.add_argument("--reset-chassis", dest="reset_chassis", action="store_true",
+                        help=argparse.SUPPRESS) #"Cold reset chassis")
+    params.add_argument("--power-cycle", dest="power_cycle", action="store_true",
+                        help=argparse.SUPPRESS) #"AC power cycle (off/on) chassis")
+    return parser
+
+
+def main():
+    parser = setup_parser()
+    args = parser.parse_args()
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+
+    # Print to stderr for warning/error/critical logs
+    log.setLevel(logging.ERROR)
+    errhandler = logging.StreamHandler(sys.stderr)
+    errhandler.setLevel(logging.WARNING)
+    stderr_formatter = logging.Formatter("%(levelname)s: %(message)s")
+    errhandler.setFormatter(stderr_formatter)
+    log.addHandler(errhandler)
+    if args.debug:
+        # Print all logs to file
+        handler = logging.FileHandler(log_path)
+        handler.setLevel(logging.DEBUG)
+        log_formatter = logging.Formatter("%(asctime)s - %(levelname)s: %(message)s")
+        handler.setFormatter(log_formatter)
+        log.addHandler(handler)
+        log.setLevel(logging.DEBUG)
+
+    now = datetime.now()
+    epoch = now.timestamp()
+    # Create gb200 firmware manager object
+    try:
+        dgx_gb200_fwmgr = DGX_GB200(logger=log, debug=args.debug)
+    except Exception as e:
+        log.error(f'Failed to initialize firmware manager: {e}')
+        return 1
+
+    # display local head node firmware image repository
+    if args.info:
+        # ./cm-gb200-firmware-manage --info
+        # argparse uses fw_image_dir to validate directory
+        path = args.info
+        if path == BASE_FW_PATH:
+            # append platform directory to base firmware repository path
+            path = os.path.join(BASE_FW_PATH, PLATFORM_FW_DIR)
+        # if path location does not exist, exit.
+        if not (os.path.exists(path) and os.path.isdir(path)):
+            log.error(f"Firmware directory invalid: {path}")
+            print("[]")
+            return 1
+        result = dgx_gb200_fwmgr.list_local_fwpkg_info(path)
+        print(json.dumps(result, indent=2))
+        return 0
+
+    # connect to redfish service
+    env_vars = cmd_env.CmdBmcEnvVars()
+    if not all([env_vars.username, env_vars.password, env_vars.remote_host]):
+        log.error("Host IP or Credentials are not set properly")
+        print("[]")
+        return 1
+    try:
+        # Create redfish client object
+        dgx_gb200_fwmgr.connect(env_vars.remote_host,
+                                env_vars.username,
+                                env_vars.password)
+    except InvalidCredentialsError as err:
+        log.error(f"Invalid credentials provided.")
+        print("[]")
+        return 1
+    except ServerDownOrUnreachableError as err:
+        log.error(f"{env_vars.remote_host} not reachable or does not support Redfish.")
+        print("[]")
+        return 1
+    except RetriesExhaustedError as err:
+        log.error(f"Unable to connect to Redfish service at {env_vars.remote_host}.")
+        print("[]")
+        return 1
+    else:
+        if not dgx_gb200_fwmgr.verify_model():
+            log.error(f"Platform verification failed. Wrong BMC firmware manage mode selected?")
+            print("[]")
+            return 1
+
+    if args.make_fake:
+        # display PLDM firmware contents for representation in fake_gb200 fwpkg
+        # requires connection to a real device for validating the current component list
+        # ./cm-gb200-firmware-manage --make-fake <nvfw_image.fwpkg>
+        result = {}
+        image_path = args.make_fake
+        image_component = dgx_gb200_fwmgr.get_image_component(image_path)
+        version = dgx_gb200_fwmgr.get_fwpkg_version(image_path)
+        fwpkg_date = dgx_gb200_fwmgr.get_fwpkg_date(image_path)
+        # get list of fwpkg component-versions using dryrun output
+        dryrun = dgx_gb200_fwmgr.update_dryrun(image_path, terse=False)
+        pldm_pkg_list = {
+            c["component"]:c["pkg_version"]
+            for c in dryrun if c["pkg_version"].lower() not in ["unknown", "n/a"]
+            }
+        result["component"] = image_component.replace("GB200", "FAKE_GB200")
+        result["version"] = f"{version}_fake"
+        result["date"] = fwpkg_date
+        result["size"] = os.path.getsize(image_path)
+        result["pldm_pkg"] = pldm_pkg_list
+        print(json.dumps(result, sort_keys = False, indent=2))
+        return 0
+
+    # validate firmware file
+    if bool(args.flash):
+        # if the flash parameter was specified, verify the file
+        try:
+            log.info(f"Firmware file path specified: {args.flash}")
+            # if file location STILL does not exist or is not a file, throw error
+            if not (os.path.exists(args.flash) and os.path.isfile(args.flash)):
+                log.error(f"Firmware file path invalid: {args.flash}")
+                return 1
+            dgx_gb200_fwmgr.verify_platform_fwpkg(args.flash)
+        except FileNotFoundError as err:
+            log.error(f"Firmware file {args.flash} does not exist.")
+            print("[]")
+            return 1
+        except ValueError as err:
+            log.error(f"Invalid firmware file specified for this platform.")
+            print("[]")
+            return 1
+
+    if args.dryrun and args.flash:
+        # Simulate what would happen for an update operation given the parameters.
+        # Dryrun compares the current device firmware to fw package contents, and
+        # displays what would be installed.
+        # ./cm-gb200-firmware-manage --dryrun \
+        #   --flash nvfw_Grace-Hopperx8_0002_230802.1.0_custom_dbg-signed.fwpkg
+        try:
+            result = dgx_gb200_fwmgr.update_dryrun(args.flash, args.targets, args.force, terse=False)
+        except Exception as err:
+            log.error(err)
+            print("[]")
+            return 1
+        print(json.dumps(result, indent=2))
+
+    elif args.flash:
+        # Install/upgrade all components from image (will NOT downgrade or reinstall):
+        # ./cm-gb200-firmware-manage --flash /path/to/image.fwpkg
+        # Install/upgrade only select targets (e.g. BMC firmware):
+        # ./cm-gb200-firmware-manage --flash /path/to/image.fwpkg --targets FW_BMC_0
+        # Upgrade/Downgrade/Reinstall all components using the force flag (not really safe or recommended):
+        # ./cm-gb200-firmware-manage --flash /path/to/image.fwpkg --force
+        # Upgrade/Downgrade/Reinstall select components using the target and force flag:
+        # ./cm-gb200-firmware-manage --flash /path/to/image.fwpkg --force --targets FW_BMC_0
+        result = {'flashing': []}
+        # file used to track the flashing operation through status complete
+        flash_lock = read_flash_lock(env_vars.remote_host)
+        if flash_lock:
+            # lock is stale after 1/2 hour, remove it
+            if epoch - flash_lock['start'] > 1800:
+                delete_flash_lock(env_vars.remote_host)
+            else:
+                log.error(f"Flash operation in progress or awaiting activation actions by user.\n"
+                          f"To override, delete the file: {flash_lock_filename(env_vars.remote_host)}")
+                print("[]")
+                return 1
+        try:
+            task_uri = None
+            components = dgx_gb200_fwmgr.update_dryrun(args.flash, args.targets, args.force)
+            task_uri = dgx_gb200_fwmgr.update_firmware(args.flash, args.targets, args.force)
+        except Exception as err:
+            log.error(err)
+            print("[]")
+            return 1
+        else:
+            if task_uri:
+                # fetch the initial task status
+                task_status = dgx_gb200_fwmgr.rf_get_task_status(task_uri)
+                # after initiating the flash operation, update the flash history
+                # with the current operation details
+                result['flashing'].append(os.path.basename(args.flash))
+                lock_state = {
+                    "start": epoch,
+                    "image": args.flash,
+                    "targets": args.targets,
+                    "force": args.force,
+                    "task_uri": task_uri,
+                    "components": components,
+                    "state": task_status.get('state', 'unknown'),
+                    "progress": task_status.get('progress', '0'),
+                    "result": task_status.get('result', 'unknown'),
+                    "activation": task_status.get('activation', 'unknown')
+                }
+                write_flash_lock(env_vars.remote_host, lock_state)
+            else:
+                # dryrun output compares the fwpkg to the hardware,
+                # and knows what (if anything) will be flashed
+                result['flashing'].append("Device up-to-date, skipping flash operation.")
+        print(json.dumps(result, indent=2))
+
+    elif args.status:
+        # Display last status for update operation
+        # ./cm-gb200-firmware-manage --status
+        task_uri = None
+        task_status = dict()
+        result = list()
+        activated_list = list()
+        failed_list = list()
+        # get all firmware components
+        component_data = dgx_gb200_fwmgr.list_components()
+        # read the data written to lock (state) file when flash command was executed
+        flash_data = read_flash_lock(env_vars.remote_host)
+        if flash_data:
+            # flash operation in progress
+            task_uri = flash_data['task_uri']
+            update_list = flash_data['components']
+            start_timestamp = flash_data['start']
+            try:
+                # fetch the update status using redfish task uri
+                task_status = dgx_gb200_fwmgr.get_update_task_status(task_uri)
+            except Exception as e:
+                # if BMC is reset following update, the task list is cleared.
+                # there is no way to track progress of the update.
+                delete_flash_lock(env_vars.remote_host)
+                log.error(f"Unable to retrieve update status from BMC")
+                result = component_data
+            else:
+                # if the redfish task is available, update the rf_task variables
+                if task_status:
+                    if "error" in task_status:
+                        rf_task_result = "error"
+                        delete_flash_lock(env_vars.remote_host)
+                        log.error(json.dumps(task_status['error'], indent=2))
+                        return 1
+                    # Read the overall task state to display in each component
+                    flash_data['state'] = task_status['state']
+                    flash_data['progress'] = task_status.get('progress', '')
+                    flash_data['result'] = task_status.get('result', '')
+                    flash_data['activation'] = task_status.get('activation', '')
+                    # write updated flash data back to lockfile
+                    write_flash_lock(env_vars.remote_host, flash_data)
+                # populate rf_task_ variables with last know values from flash_data lock file
+                rf_task_state = flash_data['state']
+                rf_task_progress = flash_data['progress']
+                rf_task_result = flash_data['result']
+                rf_task_activation = flash_data['activation']
+                # convert full list to mapping for easy updating
+                component_map = {c['component']:c for c in component_data}
+                # iterate the dryrun component list from the lock file flash data
+                for comp in update_list:
+                    if "error" in comp:
+                        # sometimes the firmware inventory fails to return some components
+                        comp['state'] = "error"
+                        comp['result'] = "failed to get component info"
+                    # include fields to display in cmsh
+                    comp['filename'] = os.path.basename(flash_data['image'])
+                    comp['size'] = os.path.getsize(flash_data['image'])
+                    comp['timestamp'] = flash_data['start']
+                    # update components status
+                    if rf_task_state == "running":
+                        # inprogress/flashing
+                        comp['state'] = "flashing"
+                        comp['progress'] = rf_task_progress
+                    elif rf_task_state == "completed":
+                        # If the firmware has not been activated on the component,
+                        # we need to indicate that to the user.
+                        # Typically pkg_version will be newer than active version
+                        # If the --force option is used for downgrade,
+                        # we verify the active is newer than pkg_version
+                        active_version = component_map[comp['component']]['version']
+
+                        if dgx_gb200_fwmgr.pkg_version_newer(comp['pkg_version'], active_version) or (
+                            flash_data['force'] and dgx_gb200_fwmgr.pkg_version_newer(active_version, comp['pkg_version'])
+                        ):
+                            # Component not activated with updated pkg_version
+                            comp['state'] = "pending"
+                            comp['version'] = f"{comp['version']} -> {comp.get('pkg_version', '')}"
+                            if rf_task_activation:
+                                # reusing state column to display activation instructions
+                                comp['result'] = f"{rf_task_result}: {rf_task_activation} to activate"
+                            else:
+                                # if the activation action is not returned, assume AC power cycle
+                                comp['result'] = f"{rf_task_result}: Refer to docs to activate"
+                        else:
+                            # update task is finished following activation
+                            # task messages may be cleared, so assume success if activated
+                            comp['state'] = "completed"
+                            comp['result'] = f"success: activated"
+                            # Component firmware appears to be running package version
+                            comp['version'] = active_version
+                            comp.pop('filename', None)
+                            comp.pop('size', None)
+                            comp.pop('timestamp', None)
+                            activated_list.append(comp)
+                    else:
+                        # Catch any unhandled states and output
+                        comp['result'] = rf_task_result
+                        comp['state'] = rf_task_state
+                        failed_list.append(comp)
+                    # Remove unnecessary keys for display
+                    comp.pop('uri', None)
+                    comp.pop('pkg_version', None)
+                    comp.pop('up_to_date', None)
+                    comp.pop('action', None)
+                    # update component status for output to CMD
+                    component_map[comp['component']] = comp
+                # convert component mapping back to component list
+                result = list(component_map.values())
+                # when completed and all components are activated, remove flash_lock
+                if rf_task_result and len(activated_list) == len(update_list):
+                    delete_flash_lock(env_vars.remote_host)
+                # if all components are marked failed, remove flash lock to allow retry
+                if rf_task_result == "failed" and len(failed_list) == len(update_list):
+                    log.error(f"Update Failed; check {task_uri} and retry")
+                    delete_flash_lock(env_vars.remote_host)
+        else:
+            # no update tasks could be found, just return current firmware
+            result = component_data
+        print(json.dumps(result, indent=2))
+
+    elif args.reset_bmc:
+        # Following a reset, the task is created and shows exception, due to the BMC resetting
+        # ./cm-gb200-firmware-manage --reset_bmc
+        # ./cm-gb200-firmware-manage --status
+        # {
+        # "id": "6",
+        # "name": "manager reset",
+        # "state": "exception",
+        # "date": "2023-08-03T17:23:29+00:00"
+        # }
+        # Then the BMC Redfish service does not respond until the BMC is back up!
+        result = dgx_gb200_fwmgr.reset_manager("GracefulRestart")
+        print(result)
+
+    elif args.reset_chassis:
+        # Trigger a cold reset to activate new firmware installed
+        # ./cm-gb200-firmware-manage --reset_chassis
+        result = dgx_gb200_fwmgr.reset_chassis("PowerCycle")
+        print(result)
+
+    elif args.power_cycle:
+        # Trigger an AC power cycle of node to activate new firmware installed
+        # ./cm-gb200-firmware-manage --power_cycle
+        try:
+            result = dgx_gb200_fwmgr.aux_power_cycle()
+            print(result)
+        except Exception:
+            log.error("GB200 AuxPowerCycle failed.")
+            return 1
+
+    else:
+        sys.stderr.write('Invalid command option combination\n')
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
