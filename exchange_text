@@ -1,1 +1,59 @@
 
+[bcm11-headnode->device]% ls
+Type             Hostname (key)   MAC                Category         IP               Network          Status
+---------------- ---------------- ------------------ ---------------- ---------------- ---------------- -----------------------
+HeadNode         bcm11-headnode   B8:E9:24:29:57:38                   172.19.134.254   internalnet      [   UP   ]
+PhysicalNode     k8s-master       00:00:00:00:00:00  k8s-master       172.19.134.25    internalnet      [  DOWN  ], unassigned
+PhysicalNode     node001          48:21:0B:71:49:D1  gb200            172.19.134.11    internalnet      [   UP   ]
+PhysicalNode     node002          48:21:0B:71:49:AA  gb200            172.19.134.2     internalnet      [   UP   ]
+PhysicalNode     node003          48:21:0B:71:49:BA  gb200-003        172.19.134.6     internalnet      [   UP   ]
+PhysicalNode     node004          48:21:0B:71:49:B4  gb200            172.19.134.7     internalnet      [   UP   ]
+PhysicalNode     node005          48:21:0B:71:49:B3  gb200            172.19.134.8     internalnet      [   UP   ]
+PhysicalNode     node006          48:21:0B:71:49:B8  gb200            172.19.134.9     internalnet      [   UP   ]
+PhysicalNode     node007          48:21:0B:71:49:B5  gb200            172.19.134.10    internalnet      [   UP   ]
+PhysicalNode     node008          48:21:0B:71:49:A8  gb200            172.19.134.12    internalnet      [   UP   ]
+PhysicalNode     node009          48:21:0B:71:49:A7  gb200            172.19.134.13    internalnet      [   UP   ]
+PhysicalNode     node010          48:21:0B:71:49:AB  gb200            172.19.134.14    internalnet      [   UP   ]
+PhysicalNode     node011          48:21:0B:71:49:AD  gb200            172.19.134.15    internalnet      [   UP   ]
+PhysicalNode     node012          48:21:0B:71:49:A9  gb200            172.19.134.16    internalnet      [   UP   ]
+PhysicalNode     node013          48:21:0B:71:49:B1  gb200            172.19.134.17    internalnet      [   UP   ]
+PhysicalNode     node014          48:21:0B:71:49:B2  gb200            172.19.134.18    internalnet      [   UP   ]
+PhysicalNode     node015          48:21:0B:71:49:B9  gb200            172.19.134.19    internalnet      [   UP   ]
+PhysicalNode     node016          48:21:0B:71:49:A6  gb200            172.19.134.20    internalnet      [   UP   ]
+PhysicalNode     node017          48:21:0B:71:49:BB  gb200            172.19.134.21    internalnet      [   UP   ]
+PhysicalNode     node018          48:21:0B:71:49:A5  gb200-os73       172.19.134.22    internalnet      [   UP   ]
+PhysicalNode     slurm-headnode   00:00:00:00:00:00  slurm-master     172.19.134.4     internalnet      [  DOWN  ], unassigned
+[bcm11-headnode->device]%
+Tue Mar 24 16:09:48 2026 [warning] node018: The trigger 'Unknown health checks' is active because the measurable 'nvsm_pci_health' is UNKNOWN (5)
+[bcm11-headnode->device]%
+Tue Mar 24 16:09:48 2026 [warning] node018: The trigger 'Unknown health checks' is active because the measurable 'nvsm_show_health' is UNKNOWN (6)
+[bcm11-headnode->device]%
+Tue Mar 24 16:09:49 2026 [notice] bcm11-headnode: node018 [   UP   ], health check unknown
+[bcm11-headnode->device]% ls
+Type             Hostname (key)   MAC                Category         IP               Network          Status
+---------------- ---------------- ------------------ ---------------- ---------------- ---------------- --------------------------------
+HeadNode         bcm11-headnode   B8:E9:24:29:57:38                   172.19.134.254   internalnet      [   UP   ]
+PhysicalNode     k8s-master       00:00:00:00:00:00  k8s-master       172.19.134.25    internalnet      [  DOWN  ], unassigned
+PhysicalNode     node001          48:21:0B:71:49:D1  gb200            172.19.134.11    internalnet      [   UP   ]
+PhysicalNode     node002          48:21:0B:71:49:AA  gb200            172.19.134.2     internalnet      [   UP   ]
+PhysicalNode     node003          48:21:0B:71:49:BA  gb200-003        172.19.134.6     internalnet      [   UP   ]
+PhysicalNode     node004          48:21:0B:71:49:B4  gb200            172.19.134.7     internalnet      [   UP   ]
+PhysicalNode     node005          48:21:0B:71:49:B3  gb200            172.19.134.8     internalnet      [   UP   ]
+PhysicalNode     node006          48:21:0B:71:49:B8  gb200            172.19.134.9     internalnet      [   UP   ]
+PhysicalNode     node007          48:21:0B:71:49:B5  gb200            172.19.134.10    internalnet      [   UP   ]
+PhysicalNode     node008          48:21:0B:71:49:A8  gb200            172.19.134.12    internalnet      [   UP   ]
+PhysicalNode     node009          48:21:0B:71:49:A7  gb200            172.19.134.13    internalnet      [   UP   ]
+PhysicalNode     node010          48:21:0B:71:49:AB  gb200            172.19.134.14    internalnet      [   UP   ]
+PhysicalNode     node011          48:21:0B:71:49:AD  gb200            172.19.134.15    internalnet      [   UP   ]
+PhysicalNode     node012          48:21:0B:71:49:A9  gb200            172.19.134.16    internalnet      [   UP   ]
+PhysicalNode     node013          48:21:0B:71:49:B1  gb200            172.19.134.17    internalnet      [   UP   ]
+PhysicalNode     node014          48:21:0B:71:49:B2  gb200            172.19.134.18    internalnet      [   UP   ]
+PhysicalNode     node015          48:21:0B:71:49:B9  gb200            172.19.134.19    internalnet      [   UP   ]
+PhysicalNode     node016          48:21:0B:71:49:A6  gb200            172.19.134.20    internalnet      [   UP   ]
+PhysicalNode     node017          48:21:0B:71:49:BB  gb200            172.19.134.21    internalnet      [   UP   ]
+PhysicalNode     node018          48:21:0B:71:49:A5  gb200-os73       172.19.134.22    internalnet      [   UP   ], health check unknown
+PhysicalNode     slurm-headnode   00:00:00:00:00:00  slurm-master     172.19.134.4     internalnet      [  DOWN  ], unassigned
+[bcm11-headnode->device]%
+Tue Mar 24 16:10:01 2026 [warning] bcm11-headnode: The trigger 'Failing health checks' is active because the measurable 'cm-chroot-sw-img' is FAIL (8)
+[bcm11-headnode->device]%
+
