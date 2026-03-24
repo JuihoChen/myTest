@@ -57,3 +57,9 @@ PhysicalNode     slurm-headnode   00:00:00:00:00:00  slurm-master     172.19.134
 Tue Mar 24 16:10:01 2026 [warning] bcm11-headnode: The trigger 'Failing health checks' is active because the measurable 'cm-chroot-sw-img' is FAIL (8)
 [bcm11-headnode->device]%
 
+-----------------------------
+
+root@bcm11-headnode:/cm/images# mount | grep /cm/images/
+proc on /cm/images/dgx-os73-ubuntu2404-aarch64-clone/proc type proc (rw,relatime)
+root@bcm11-headnode:/cm/images# umount  /cm/images/dgx-os73-ubuntu2404-aarch64-clone/proc
+
