@@ -59,7 +59,53 @@ Tue Mar 24 16:10:01 2026 [warning] bcm11-headnode: The trigger 'Failing health c
 
 -----------------------------
 
-root@bcm11-headnode:/cm/images# mount | grep /cm/images/
-proc on /cm/images/dgx-os73-ubuntu2404-aarch64-clone/proc type proc (rw,relatime)
-root@bcm11-headnode:/cm/images# umount  /cm/images/dgx-os73-ubuntu2404-aarch64-clone/proc
+root@bcm11-headnode:~# cmsh -c "help"
+================================= Top ==================================
+alias ......................... Set aliases
+category ...................... Enter category mode
+cert .......................... Enter cert mode
+cloud ......................... Enter cloud mode
+color ......................... Manage console text color settings
+configurationoverlay .......... Enter configurationoverlay mode
+connect ....................... Connect to cluster
+delimiter ..................... Display/set delimiter
+device ........................ Enter device mode
+disconnect .................... Disconnect from cluster
+edgesite ...................... Enter edgesite mode
+etcd .......................... Enter etcd mode
+events ........................ Manage events
+exit .......................... Exit from current object or mode
+export ........................ Display list of aliases current list formats
+fspart ........................ Enter fspart mode
+group ......................... Enter group mode
+groupingsyntax ................ Manage the default grouping syntax
+help .......................... Display this help
+hierarchy ..................... Enter hierarchy mode
+history ....................... Display command history
+kubernetes .................... Enter kubernetes mode
+list .......................... List state for all modes
+main .......................... Enter main mode
+modified ...................... List modified objects
+monitoring .................... Enter monitoring mode
+network ....................... Enter network mode
+nodegroup ..................... Enter nodegroup mode
+partition ..................... Enter partition mode
+powercircuit .................. Enter powercircuit mode
+process ....................... Enter process mode
+profile ....................... Enter profile mode
+quit .......................... Quit shell
+quitconfirmation .............. Manage the status of quit confirmation
+rack .......................... Enter rack mode
+refresh ....................... Refresh all modes
+run ........................... Execute cmsh commands from specified file
+session ....................... Enter session mode
+softwareimage ................. Enter softwareimage mode
+task .......................... Enter task mode
+time .......................... Measure time of executing command
+unalias ....................... Unset aliases
+user .......................... Enter user mode
+watch ......................... Execute a command periodically, showing output
+wlm ........................... Enter wlm mode
+root@bcm11-headnode:~#
+
 
