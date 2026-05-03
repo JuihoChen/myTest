@@ -57,7 +57,6 @@ Tue Mar 24 16:10:01 2026 [warning] bcm11-headnode: The trigger 'Failing health c
 [bcm11-headnode->device]%
 
 -----------------------------
-
 ark@ark:~/inference_results_v6.0/closed/NVIDIA$ ll build/sqsh_images/
 total 49000532
 drwxrwxr-x 2 ark ark        4096 Apr 30 20:45 ./
@@ -72,5 +71,13 @@ ark      tty2     -                Thu08    3days  0.03s  0.03s /usr/libexec/gno
 ark               10.254.192.16    Thu10   28:04m  0.00s  0.03s sshd: ark [priv]
 ark               10.254.192.16    Thu09   28:04m  0.00s  0.03s sshd: ark [priv]
 ark@ark:~/inference_results_v6.0/closed/NVIDIA$
+--------------------------------
+# Verify tensorrt_llm is now in the release sqsh
+srun --partition=b300 \
+    --container-image "$(pwd)/build/sqsh_images/trtllm-release-5277e6252eaf91f65ae60bc62b233e5284d7d33f.sqsh" \
+    python3 -c "import tensorrt_llm; print(tensorrt_llm.__version__)"
 
+If that prints a version number, rebuild the MLPerf sqsh:
+make prebuild BENCHMARK=llama2-70b ENV=release PREBUILD_TYPE=sqsh \
+    MLPERF_SCRATCH_PATH=/home/ark/scratch/space
 
