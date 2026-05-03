@@ -1,4 +1,3 @@
-
 [bcm11-headnode->device]% ls
 Type             Hostname (key)   MAC                Category         IP               Network          Status
 ---------------- ---------------- ------------------ ---------------- ---------------- ---------------- -----------------------
@@ -59,53 +58,19 @@ Tue Mar 24 16:10:01 2026 [warning] bcm11-headnode: The trigger 'Failing health c
 
 -----------------------------
 
-root@bcm11-headnode:~# cmsh -c "help"
-================================= Top ==================================
-alias ......................... Set aliases
-category ...................... Enter category mode
-cert .......................... Enter cert mode
-cloud ......................... Enter cloud mode
-color ......................... Manage console text color settings
-configurationoverlay .......... Enter configurationoverlay mode
-connect ....................... Connect to cluster
-delimiter ..................... Display/set delimiter
-device ........................ Enter device mode
-disconnect .................... Disconnect from cluster
-edgesite ...................... Enter edgesite mode
-etcd .......................... Enter etcd mode
-events ........................ Manage events
-exit .......................... Exit from current object or mode
-export ........................ Display list of aliases current list formats
-fspart ........................ Enter fspart mode
-group ......................... Enter group mode
-groupingsyntax ................ Manage the default grouping syntax
-help .......................... Display this help
-hierarchy ..................... Enter hierarchy mode
-history ....................... Display command history
-kubernetes .................... Enter kubernetes mode
-list .......................... List state for all modes
-main .......................... Enter main mode
-modified ...................... List modified objects
-monitoring .................... Enter monitoring mode
-network ....................... Enter network mode
-nodegroup ..................... Enter nodegroup mode
-partition ..................... Enter partition mode
-powercircuit .................. Enter powercircuit mode
-process ....................... Enter process mode
-profile ....................... Enter profile mode
-quit .......................... Quit shell
-quitconfirmation .............. Manage the status of quit confirmation
-rack .......................... Enter rack mode
-refresh ....................... Refresh all modes
-run ........................... Execute cmsh commands from specified file
-session ....................... Enter session mode
-softwareimage ................. Enter softwareimage mode
-task .......................... Enter task mode
-time .......................... Measure time of executing command
-unalias ....................... Unset aliases
-user .......................... Enter user mode
-watch ......................... Execute a command periodically, showing output
-wlm ........................... Enter wlm mode
-root@bcm11-headnode:~#
+ark@ark:~/inference_results_v6.0/closed/NVIDIA$ ll build/sqsh_images/
+total 49000532
+drwxrwxr-x 2 ark ark        4096 Apr 30 20:45 ./
+drwxrwxr-x 4 ark ark        4096 Apr 30 09:40 ../
+-rw-r--r-- 1 ark ark 22472007680 Apr 30 10:55 trtllm-dev-5277e6252eaf91f65ae60bc62b233e5284d7d33f.sqsh
+-rw-r--r-- 1 ark ark 27704516608 Apr 30 20:47 trtllm-release-5277e6252eaf91f65ae60bc62b233e5284d7d33f.sqsh
+ark@ark:~/inference_results_v6.0/closed/NVIDIA$ w
+ 10:58:17 up 3 days,  2:02,  4 users,  load average: 0.06, 0.01, 0.00
+USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU  WHAT
+ark               172.18.255.20    10:49   28:04m  0.00s  0.03s sshd: ark [priv]
+ark      tty2     -                Thu08    3days  0.03s  0.03s /usr/libexec/gnome-session-binary --session=ubuntu
+ark               10.254.192.16    Thu10   28:04m  0.00s  0.03s sshd: ark [priv]
+ark               10.254.192.16    Thu09   28:04m  0.00s  0.03s sshd: ark [priv]
+ark@ark:~/inference_results_v6.0/closed/NVIDIA$
 
 
