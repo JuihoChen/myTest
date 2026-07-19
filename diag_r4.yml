@@ -1,0 +1,99 @@
+---
+# diag_r4.yml
+# Runs `dcgmi diag -r 4` in parallel across the [gb300_rack] inventory group,
+# fixes the known pulse_test permissions bug first, then fetches each node's
+# JSON result back to the control node under ./dcgm-r4-results/.
+#
+# Usage:
+#   ansible-playbook -i inventory.ini diag_r4.yml --forks 18
+#
+# Note: r4 can take up to ~2.25h per node (runs concurrently across nodes,
+# so total wall time is roughly that of the slowest node, not 18x).
+#
+- name: Run DCGM diag r4 across GB300 rack
+  hosts: gb300_rack
+  gather_facts: false
+  vars:
+    results_dir: "./dcgm-r4-results"
+
+  tasks:
+    - name: Ensure systemd override directory exists for nvidia-dcgm
+      file:
+        path: /etc/systemd/system/nvidia-dcgm.service.d
+        state: directory
+        mode: "0755"
+
+    - name: Apply RuntimeDirectory-based WorkingDirectory override for nvidia-dcgm service (pulse_test permissions fix -- self-healing across reboots, unlike /tmp)
+      copy:
+        dest: /etc/systemd/system/nvidia-dcgm.service.d/override.conf
+        content: |
+          [Service]
+          RuntimeDirectory=nvidia-dcgm-work
+          WorkingDirectory=/run/nvidia-dcgm-work
+        mode: "0644"
+      notify: restart nvidia-dcgm
+
+    - meta: flush_handlers
+
+    - name: Confirm nvidia-dcgm is active before running diag
+      command: systemctl is-active nvidia-dcgm
+      register: dcgm_active
+      changed_when: false
+      failed_when: dcgm_active.stdout != "active"
+
+    - name: Run dcgmi diag -r 4 (this is the long-running step)
+      command: dcgmi diag -r 4 -j
+      register: diag_result
+      changed_when: false
+      failed_when: false  # capture failures ourselves rather than aborting the play
+
+    - name: Save raw JSON output locally on the node
+      copy:
+        content: "{{ diag_result.stdout }}"
+        dest: "/tmp/dcgm-r4-{{ inventory_hostname }}.json"
+
+    - name: Fetch JSON result back to control node
+      fetch:
+        src: "/tmp/dcgm-r4-{{ inventory_hostname }}.json"
+        dest: "{{ results_dir }}/{{ inventory_hostname }}.json"
+        flat: true
+
+    - name: Report exit code per node
+      debug:
+        msg: "{{ inventory_hostname }}: dcgmi exit code {{ diag_result.rc }}"
+
+    - name: Flag nodes with non-zero exit code
+      debug:
+        msg: "FAIL on {{ inventory_hostname }} -- check {{ results_dir }}/{{ inventory_hostname }}.json"
+      when: diag_result.rc != 0
+
+  handlers:
+    - name: restart nvidia-dcgm
+      systemd:
+        daemon_reload: true
+        name: nvidia-dcgm
+        state: restarted
+
+- name: Summarize results on control node
+  hosts: localhost
+  gather_facts: false
+  vars:
+    results_dir: "./dcgm-r4-results"
+  tasks:
+    - name: Find fetched result files
+      find:
+        paths: "{{ results_dir }}"
+        patterns: "*.json"
+      register: found_files
+
+    - name: Scan each result file for Fail/Warn status
+      shell: >
+        grep -o '"status"[[:space:]]*:[[:space:]]*"[A-Za-z]*"' "{{ item.path }}" | sort -u || true
+      loop: "{{ found_files.files }}"
+      register: status_scan
+      changed_when: false
+
+    - name: Print summary
+      debug:
+        msg: "{{ item.item.path }}: {{ item.stdout_lines }}"
+      loop: "{{ status_scan.results }}"
