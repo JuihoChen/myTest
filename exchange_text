@@ -1,23 +1,165 @@
-[gb300_rack]
-192.168.13.182
-192.168.13.183
-192.168.13.184
-192.168.13.185
-192.168.13.186
-192.168.13.187
-192.168.13.188
-192.168.13.189
-192.168.13.190
-192.168.13.191
-192.168.13.192
-192.168.13.193
-192.168.13.194
-192.168.13.195
-192.168.13.196
-192.168.13.197
-192.168.13.198
-192.168.13.199
+ansible-playbook -i ../hosts.ini mndiag.yml --forks 18
 
-[gb300_rack:vars]
-ansible_user=root
-ansible_become=false
+PLAY [Determine head node] **********************************************************************************************************
+
+TASK [Set head node (first host in group unless overridden with -e mndiag_head=...)] ************************************************
+ok: [localhost]
+
+TASK [Add resolved head node to a dedicated group for targeting] ********************************************************************
+changed: [localhost]
+
+TASK [Report head node choice] ******************************************************************************************************
+ok: [localhost] => {
+    "msg": "mndiag head node: 192.168.13.182 (override with -e mndiag_head=<ip>)"
+}
+
+PLAY [Generate SSH keypair on head node (if not already present)] *******************************************************************
+
+TASK [Check if mndiag SSH key already exists] ***************************************************************************************
+ok: [192.168.13.182]
+
+TASK [Generate ed25519 keypair for mndiag (unencrypted, as required for non-interactive SSH)] ***************************************
+skipping: [192.168.13.182]
+
+TASK [Read the generated public key] ************************************************************************************************
+ok: [192.168.13.182]
+
+TASK [Ensure SSH config uses this key by default for rack IPs] **********************************************************************
+ok: [192.168.13.182]
+
+PLAY [Distribute head node's public key to all rack nodes] **************************************************************************
+
+TASK [Authorize head node's mndiag public key] **************************************************************************************
+ok: [192.168.13.182]
+ok: [192.168.13.185]
+ok: [192.168.13.190]
+ok: [192.168.13.191]
+ok: [192.168.13.183]
+ok: [192.168.13.193]
+ok: [192.168.13.196]
+ok: [192.168.13.199]
+ok: [192.168.13.184]
+ok: [192.168.13.186]
+ok: [192.168.13.187]
+ok: [192.168.13.188]
+ok: [192.168.13.189]
+ok: [192.168.13.195]
+ok: [192.168.13.197]
+ok: [192.168.13.192]
+ok: [192.168.13.198]
+ok: [192.168.13.194]
+
+PLAY [Pre-trust all node host keys on the head node (avoid interactive SSH prompts)] ************************************************
+
+TASK [Scan and add all rack node host keys to known_hosts] **************************************************************************
+ok: [192.168.13.182] => (item=192.168.13.182)
+ok: [192.168.13.182] => (item=192.168.13.183)
+ok: [192.168.13.182] => (item=192.168.13.184)
+ok: [192.168.13.182] => (item=192.168.13.185)
+ok: [192.168.13.182] => (item=192.168.13.186)
+ok: [192.168.13.182] => (item=192.168.13.187)
+ok: [192.168.13.182] => (item=192.168.13.188)
+ok: [192.168.13.182] => (item=192.168.13.189)
+ok: [192.168.13.182] => (item=192.168.13.190)
+ok: [192.168.13.182] => (item=192.168.13.191)
+ok: [192.168.13.182] => (item=192.168.13.192)
+ok: [192.168.13.182] => (item=192.168.13.193)
+ok: [192.168.13.182] => (item=192.168.13.194)
+ok: [192.168.13.182] => (item=192.168.13.195)
+ok: [192.168.13.182] => (item=192.168.13.196)
+ok: [192.168.13.182] => (item=192.168.13.197)
+ok: [192.168.13.182] => (item=192.168.13.198)
+ok: [192.168.13.182] => (item=192.168.13.199)
+
+PLAY [Verify prerequisites on head node] ********************************************************************************************
+
+TASK [Confirm passwordless SSH works to every node] *********************************************************************************
+ok: [192.168.13.182] => (item=192.168.13.182)
+ok: [192.168.13.182] => (item=192.168.13.183)
+ok: [192.168.13.182] => (item=192.168.13.184)
+ok: [192.168.13.182] => (item=192.168.13.185)
+ok: [192.168.13.182] => (item=192.168.13.186)
+ok: [192.168.13.182] => (item=192.168.13.187)
+ok: [192.168.13.182] => (item=192.168.13.188)
+ok: [192.168.13.182] => (item=192.168.13.189)
+ok: [192.168.13.182] => (item=192.168.13.190)
+ok: [192.168.13.182] => (item=192.168.13.191)
+ok: [192.168.13.182] => (item=192.168.13.192)
+ok: [192.168.13.182] => (item=192.168.13.193)
+ok: [192.168.13.182] => (item=192.168.13.194)
+ok: [192.168.13.182] => (item=192.168.13.195)
+ok: [192.168.13.182] => (item=192.168.13.196)
+ok: [192.168.13.182] => (item=192.168.13.197)
+ok: [192.168.13.182] => (item=192.168.13.198)
+ok: [192.168.13.182] => (item=192.168.13.199)
+
+TASK [Confirm mpirun is available] **************************************************************************************************
+ok: [192.168.13.182]
+
+TASK [Warn if mpirun is missing] ****************************************************************************************************
+skipping: [192.168.13.182]
+
+TASK [Check DCGM_MNDIAG_MPIRUN_PATH is configured for nv-hostengine] ****************************************************************
+ok: [192.168.13.182]
+
+TASK [Warn if DCGM_MNDIAG_MPIRUN_PATH is not set] ***********************************************************************************
+skipping: [192.168.13.182]
+
+PLAY [Run DCGM Multi-Node Diagnostics (mndiag / mnubergemm)] ************************************************************************
+
+TASK [Build semicolon-separated host list] ******************************************************************************************
+ok: [192.168.13.182]
+
+TASK [Report the command about to run] **********************************************************************************************
+ok: [192.168.13.182] => {
+    "msg": "Running: dcgmi mndiag --hostList \"192.168.13.182;192.168.13.183;192.168.13.184;192.168.13.185;192.168.13.186;192.168.13.187;192.168.13.188;192.168.13.189;192.168.13.190;192.168.13.191;192.168.13.192;192.168.13.193;192.168.13.194;192.168.13.195;192.168.13.196;192.168.13.197;192.168.13.198;192.168.13.199\" -p \"mnubergemm.time_to_run=600\" -j"
+}
+
+TASK [Run dcgmi mndiag across the rack (this can take up to 600s + ~60s overhead)] **************************************************
+ok: [192.168.13.182]
+
+TASK [Save raw JSON output] *********************************************************************************************************
+changed: [192.168.13.182]
+
+TASK [Report exit code] *************************************************************************************************************
+ok: [192.168.13.182] => {
+    "msg": "dcgmi mndiag exit code: 0"
+}
+
+TASK [Show stderr if it failed] *****************************************************************************************************
+skipping: [192.168.13.182]
+
+PLAY [Fetch mndiag results back to control node] ************************************************************************************
+
+TASK [Fetch JSON result] ************************************************************************************************************
+changed: [192.168.13.182]
+
+PLAY [Summary] **********************************************************************************************************************
+
+TASK [Print summary location] *******************************************************************************************************
+ok: [localhost] => {
+    "msg": "mndiag run complete. Result saved to ./mndiag-results/mndiag-result.json. Review 'Hosts With Errors' and per-host/per-GPU Pass/Fail in that file."
+}
+
+PLAY RECAP **************************************************************************************************************************
+192.168.13.182             : ok=14   changed=2    unreachable=0    failed=0    skipped=4    rescued=0    ignored=0
+192.168.13.183             : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.184             : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.185             : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.186             : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.187             : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.188             : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.189             : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.190             : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.191             : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.192             : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.193             : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.194             : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.195             : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.196             : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.197             : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.198             : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.199             : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+localhost                  : ok=4    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+root@root:~/dcgm#
