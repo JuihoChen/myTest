@@ -1,26 +1,8 @@
+ansible -i ../hosts.ini gb300_rack -m copy -a "
+dest=/etc/systemd/system/nvidia-dcgm.service.d/override.conf
+content='[Service]\nRuntimeDirectory=nvidia-dcgm-work\nWorkingDirectory=/run/nvidia-dcgm-work\n'
+" --forks 18
 
-Jul 17 08:44:52 root systemd[1]: nvidia-dcgm.service: Failed with result 'exit-code'.
--- Boot 361f373e4f2341f6ad7afe44495caa22 --
-Jul 17 09:53:25 root systemd[1]: Started nvidia-dcgm.service - NVIDIA DCGM service.
-Jul 17 09:53:25 root (stengine)[2553]: nvidia-dcgm.service: Changing to the requested working directory failed: No such file or directory
-Jul 17 09:53:25 root systemd[1]: nvidia-dcgm.service: Main process exited, code=exited, status=200/CHDIR
-Jul 17 09:53:25 root systemd[1]: nvidia-dcgm.service: Failed with result 'exit-code'.
--- Boot d3cd285010c84267be7562132a671f41 --
-Jul 17 10:29:30 root systemd[1]: Started nvidia-dcgm.service - NVIDIA DCGM service.
-Jul 17 10:29:30 root (stengine)[2558]: nvidia-dcgm.service: Changing to the requested working directory failed: No such file or directory
-Jul 17 10:29:30 root systemd[1]: nvidia-dcgm.service: Main process exited, code=exited, status=200/CHDIR
-Jul 17 10:29:30 root systemd[1]: nvidia-dcgm.service: Failed with result 'exit-code'.
--- Boot a8e24291ec7548d5a5afbf19a5a773ad --
-Jul 17 11:01:08 root systemd[1]: Started nvidia-dcgm.service - NVIDIA DCGM service.
-Jul 17 11:01:08 root (stengine)[2551]: nvidia-dcgm.service: Changing to the requested working directory failed: No such file or directory
-Jul 17 11:01:08 root systemd[1]: nvidia-dcgm.service: Main process exited, code=exited, status=200/CHDIR
-Jul 17 11:01:08 root systemd[1]: nvidia-dcgm.service: Failed with result 'exit-code'.
-Jul 19 12:37:55 root systemd[1]: Started nvidia-dcgm.service - NVIDIA DCGM service.
-Jul 19 12:37:55 root (stengine)[200187]: nvidia-dcgm.service: Changing to the requested working directory failed: No such file or directory
-Jul 19 12:37:55 root systemd[1]: nvidia-dcgm.service: Main process exited, code=exited, status=200/CHDIR
-Jul 19 12:37:55 root systemd[1]: nvidia-dcgm.service: Failed with result 'exit-code'.
-Jul 19 12:38:13 root systemd[1]: Started nvidia-dcgm.service - NVIDIA DCGM service.
-Jul 19 12:38:13 root (stengine)[200212]: nvidia-dcgm.service: Changing to the requested working directory failed: No such file or directory
-Jul 19 12:38:13 root systemd[1]: nvidia-dcgm.service: Main process exited, code=exited, status=200/CHDIR
-Jul 19 12:38:13 root systemd[1]: nvidia-dcgm.service: Failed with result 'exit-code'.
-root@root:~/dcgm#
+ansible -i ../hosts.ini gb300_rack -m systemd -a "daemon_reload=yes name=nvidia-dcgm state=restarted" --forks 18
+
+ansible -i ../hosts.ini gb300_rack -m shell -a "systemctl is-active nvidia-dcgm" --forks 18
