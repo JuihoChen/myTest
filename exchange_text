@@ -1,83 +1,42 @@
-[bcm11-headnode->device]% ls
-Type             Hostname (key)   MAC                Category         IP               Network          Status
----------------- ---------------- ------------------ ---------------- ---------------- ---------------- -----------------------
-HeadNode         bcm11-headnode   B8:E9:24:29:57:38                   172.19.134.254   internalnet      [   UP   ]
-PhysicalNode     k8s-master       00:00:00:00:00:00  k8s-master       172.19.134.25    internalnet      [  DOWN  ], unassigned
-PhysicalNode     node001          48:21:0B:71:49:D1  gb200            172.19.134.11    internalnet      [   UP   ]
-PhysicalNode     node002          48:21:0B:71:49:AA  gb200            172.19.134.2     internalnet      [   UP   ]
-PhysicalNode     node003          48:21:0B:71:49:BA  gb200-003        172.19.134.6     internalnet      [   UP   ]
-PhysicalNode     node004          48:21:0B:71:49:B4  gb200            172.19.134.7     internalnet      [   UP   ]
-PhysicalNode     node005          48:21:0B:71:49:B3  gb200            172.19.134.8     internalnet      [   UP   ]
-PhysicalNode     node006          48:21:0B:71:49:B8  gb200            172.19.134.9     internalnet      [   UP   ]
-PhysicalNode     node007          48:21:0B:71:49:B5  gb200            172.19.134.10    internalnet      [   UP   ]
-PhysicalNode     node008          48:21:0B:71:49:A8  gb200            172.19.134.12    internalnet      [   UP   ]
-PhysicalNode     node009          48:21:0B:71:49:A7  gb200            172.19.134.13    internalnet      [   UP   ]
-PhysicalNode     node010          48:21:0B:71:49:AB  gb200            172.19.134.14    internalnet      [   UP   ]
-PhysicalNode     node011          48:21:0B:71:49:AD  gb200            172.19.134.15    internalnet      [   UP   ]
-PhysicalNode     node012          48:21:0B:71:49:A9  gb200            172.19.134.16    internalnet      [   UP   ]
-PhysicalNode     node013          48:21:0B:71:49:B1  gb200            172.19.134.17    internalnet      [   UP   ]
-PhysicalNode     node014          48:21:0B:71:49:B2  gb200            172.19.134.18    internalnet      [   UP   ]
-PhysicalNode     node015          48:21:0B:71:49:B9  gb200            172.19.134.19    internalnet      [   UP   ]
-PhysicalNode     node016          48:21:0B:71:49:A6  gb200            172.19.134.20    internalnet      [   UP   ]
-PhysicalNode     node017          48:21:0B:71:49:BB  gb200            172.19.134.21    internalnet      [   UP   ]
-PhysicalNode     node018          48:21:0B:71:49:A5  gb200-os73       172.19.134.22    internalnet      [   UP   ]
-PhysicalNode     slurm-headnode   00:00:00:00:00:00  slurm-master     172.19.134.4     internalnet      [  DOWN  ], unassigned
-[bcm11-headnode->device]%
-Tue Mar 24 16:09:48 2026 [warning] node018: The trigger 'Unknown health checks' is active because the measurable 'nvsm_pci_health' is UNKNOWN (5)
-[bcm11-headnode->device]%
-Tue Mar 24 16:09:48 2026 [warning] node018: The trigger 'Unknown health checks' is active because the measurable 'nvsm_show_health' is UNKNOWN (6)
-[bcm11-headnode->device]%
-Tue Mar 24 16:09:49 2026 [notice] bcm11-headnode: node018 [   UP   ], health check unknown
-[bcm11-headnode->device]% ls
-Type             Hostname (key)   MAC                Category         IP               Network          Status
----------------- ---------------- ------------------ ---------------- ---------------- ---------------- --------------------------------
-HeadNode         bcm11-headnode   B8:E9:24:29:57:38                   172.19.134.254   internalnet      [   UP   ]
-PhysicalNode     k8s-master       00:00:00:00:00:00  k8s-master       172.19.134.25    internalnet      [  DOWN  ], unassigned
-PhysicalNode     node001          48:21:0B:71:49:D1  gb200            172.19.134.11    internalnet      [   UP   ]
-PhysicalNode     node002          48:21:0B:71:49:AA  gb200            172.19.134.2     internalnet      [   UP   ]
-PhysicalNode     node003          48:21:0B:71:49:BA  gb200-003        172.19.134.6     internalnet      [   UP   ]
-PhysicalNode     node004          48:21:0B:71:49:B4  gb200            172.19.134.7     internalnet      [   UP   ]
-PhysicalNode     node005          48:21:0B:71:49:B3  gb200            172.19.134.8     internalnet      [   UP   ]
-PhysicalNode     node006          48:21:0B:71:49:B8  gb200            172.19.134.9     internalnet      [   UP   ]
-PhysicalNode     node007          48:21:0B:71:49:B5  gb200            172.19.134.10    internalnet      [   UP   ]
-PhysicalNode     node008          48:21:0B:71:49:A8  gb200            172.19.134.12    internalnet      [   UP   ]
-PhysicalNode     node009          48:21:0B:71:49:A7  gb200            172.19.134.13    internalnet      [   UP   ]
-PhysicalNode     node010          48:21:0B:71:49:AB  gb200            172.19.134.14    internalnet      [   UP   ]
-PhysicalNode     node011          48:21:0B:71:49:AD  gb200            172.19.134.15    internalnet      [   UP   ]
-PhysicalNode     node012          48:21:0B:71:49:A9  gb200            172.19.134.16    internalnet      [   UP   ]
-PhysicalNode     node013          48:21:0B:71:49:B1  gb200            172.19.134.17    internalnet      [   UP   ]
-PhysicalNode     node014          48:21:0B:71:49:B2  gb200            172.19.134.18    internalnet      [   UP   ]
-PhysicalNode     node015          48:21:0B:71:49:B9  gb200            172.19.134.19    internalnet      [   UP   ]
-PhysicalNode     node016          48:21:0B:71:49:A6  gb200            172.19.134.20    internalnet      [   UP   ]
-PhysicalNode     node017          48:21:0B:71:49:BB  gb200            172.19.134.21    internalnet      [   UP   ]
-PhysicalNode     node018          48:21:0B:71:49:A5  gb200-os73       172.19.134.22    internalnet      [   UP   ], health check unknown
-PhysicalNode     slurm-headnode   00:00:00:00:00:00  slurm-master     172.19.134.4     internalnet      [  DOWN  ], unassigned
-[bcm11-headnode->device]%
-Tue Mar 24 16:10:01 2026 [warning] bcm11-headnode: The trigger 'Failing health checks' is active because the measurable 'cm-chroot-sw-img' is FAIL (8)
-[bcm11-headnode->device]%
+TASK [Confirm passwordless SSH works to every node] *********************************************************************************
+ok: [192.168.13.199] => (item=192.168.13.199)
+ok: [192.168.13.199] => (item=192.168.13.198)
+ok: [192.168.13.199] => (item=192.168.13.197)
+ok: [192.168.13.199] => (item=192.168.13.196)
+ok: [192.168.13.199] => (item=192.168.13.195)
+ok: [192.168.13.199] => (item=192.168.13.194)
+ok: [192.168.13.199] => (item=192.168.13.193)
+ok: [192.168.13.199] => (item=192.168.13.192)
+ok: [192.168.13.199] => (item=192.168.13.191)
+ok: [192.168.13.199] => (item=192.168.13.190)
+ok: [192.168.13.199] => (item=192.168.13.189)
+ok: [192.168.13.199] => (item=192.168.13.188)
+ok: [192.168.13.199] => (item=192.168.13.187)
+ok: [192.168.13.199] => (item=192.168.13.186)
+ok: [192.168.13.199] => (item=192.168.13.185)
+ok: [192.168.13.199] => (item=192.168.13.184)
+ok: [192.168.13.199] => (item=192.168.13.183)
+failed: [192.168.13.199] (item=192.168.13.182) => {"ansible_loop_var": "item", "changed": false, "cmd": ["ssh", "-i", "/root/.ssh/id_ed25519_mndiag", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "192.168.13.182", "echo ok"], "delta": "0:00:00.103910", "end": "2026-07-19 11:53:55.222754", "failed_when_result": true, "item": "192.168.13.182", "msg": "non-zero return code", "rc": 255, "start": "2026-07-19 11:53:55.118844", "stderr": "root@192.168.13.182: Permission denied (publickey,password).", "stderr_lines": ["root@192.168.13.182: Permission denied (publickey,password)."], "stdout": "", "stdout_lines": []}
 
------------------------------
-ark@ark:~/inference_results_v6.0/closed/NVIDIA$ ll build/sqsh_images/
-total 49000532
-drwxrwxr-x 2 ark ark        4096 Apr 30 20:45 ./
-drwxrwxr-x 4 ark ark        4096 Apr 30 09:40 ../
--rw-r--r-- 1 ark ark 22472007680 Apr 30 10:55 trtllm-dev-5277e6252eaf91f65ae60bc62b233e5284d7d33f.sqsh
--rw-r--r-- 1 ark ark 27704516608 Apr 30 20:47 trtllm-release-5277e6252eaf91f65ae60bc62b233e5284d7d33f.sqsh
-ark@ark:~/inference_results_v6.0/closed/NVIDIA$ w
- 10:58:17 up 3 days,  2:02,  4 users,  load average: 0.06, 0.01, 0.00
-USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU  WHAT
-ark               172.18.255.20    10:49   28:04m  0.00s  0.03s sshd: ark [priv]
-ark      tty2     -                Thu08    3days  0.03s  0.03s /usr/libexec/gnome-session-binary --session=ubuntu
-ark               10.254.192.16    Thu10   28:04m  0.00s  0.03s sshd: ark [priv]
-ark               10.254.192.16    Thu09   28:04m  0.00s  0.03s sshd: ark [priv]
-ark@ark:~/inference_results_v6.0/closed/NVIDIA$
---------------------------------
-# Verify tensorrt_llm is now in the release sqsh
-srun --partition=b300 \
-    --container-image "$(pwd)/build/sqsh_images/trtllm-release-5277e6252eaf91f65ae60bc62b233e5284d7d33f.sqsh" \
-    python3 -c "import tensorrt_llm; print(tensorrt_llm.__version__)"
+PLAY RECAP **************************************************************************************************************************
+192.168.13.182             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.183             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.184             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.185             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.186             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.187             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.188             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.189             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.190             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.191             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.192             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.193             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.194             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.195             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.196             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.197             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.198             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+192.168.13.199             : ok=6    changed=4    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+localhost                  : ok=3    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 
-If that prints a version number, rebuild the MLPerf sqsh:
-make prebuild BENCHMARK=llama2-70b ENV=release PREBUILD_TYPE=sqsh \
-    MLPERF_SCRATCH_PATH=/home/ark/scratch/space
-
+root@root:~/dcgm#
