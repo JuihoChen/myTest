@@ -1,8 +1,2 @@
-ansible -i ../hosts.ini gb300_rack -m copy -a "
-dest=/etc/systemd/system/nvidia-dcgm.service.d/override.conf
-content='[Service]\nRuntimeDirectory=nvidia-dcgm-work\nWorkingDirectory=/run/nvidia-dcgm-work\n'
-" --forks 18
-
-ansible -i ../hosts.ini gb300_rack -m systemd -a "daemon_reload=yes name=nvidia-dcgm state=restarted" --forks 18
-
-ansible -i ../hosts.ini gb300_rack -m shell -a "systemctl is-active nvidia-dcgm" --forks 18
+root@root:~/dcgm# cat mndiag-results/mndiag-result.json
+{"DCGM Diagnostic": "DCGM Multi-Node Diagnostic", "metadata": {"num_entities": 0, "num_hosts": 0}, "runtime_error": "Error: Unable to complete multi-node diagnostic on host localhost. Return: (Feature not supported) -6\n"}root@root:~/dcgm#
