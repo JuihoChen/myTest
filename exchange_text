@@ -1,24 +1,4 @@
-root@root:~/dcgm# dcgmi modules -l
-+-----------+--------------------+--------------------------------------------------+
-| List Modules                                                                      |
-| Status: Success                                                                   |
-+===========+====================+==================================================+
-| Module ID | Name               | State                                            |
-+-----------+--------------------+--------------------------------------------------+
-| 0         | Core               | Loaded                                           |
-| 1         | NvSwitch           | Loaded                                           |
-| 2         | VGPU               | Not loaded                                       |
-| 3         | Introspection      | Not loaded                                       |
-| 4         | Health             | Not loaded                                       |
-| 5         | Policy             | Not loaded                                       |
-| 6         | Config             | Not loaded                                       |
-| 7         | Diag               | Not loaded                                       |
-| 8         | Profiling          | Not loaded                                       |
-| 9         | SysMon             | Not loaded                                       |
-| 10        | MnDiag             | Loaded                                           |
-+-----------+--------------------+--------------------------------------------------+
-root@root:~/dcgm# dcgmi mndiag --hostList "192.168.13.182;192.168.13.183;192.168.13.184;192.168.13.185;192.168.13.186;192.168.13.187;192.168.13.188;192.168.13.189;192.168.13.190;192.168.13.191;192.168.13.192;192.168.13.193;192.168.13.194;192.168.13.195;192.168.13.196;192.168.13.197;192.168.13.198;192.168.13.199" -p "mnubergemm.time_to_run=600" -j
-{
+root@root:~/dcgm# dcgmi mndiag --hostList "192.168.13.182;192.168.13.183" -p "mnubergemm.time_to_run=600" -j                         {
         "DCGM Diagnostic" : "DCGM Multi-Node Diagnostic",
         "metadata" :
         {
@@ -28,4 +8,9 @@ root@root:~/dcgm# dcgmi mndiag --hostList "192.168.13.182;192.168.13.183;192.168
         "runtime_error" : "Error: Unable to complete multi-node diagnostic on host localhost. Return: (Feature not supported) -6\n"
 }
 
+root@root:~/dcgm# nvidia-smi -q | grep -i "Device Id"
+        Device Id                                      : 0x31A110DE
+        Device Id                                      : 0x31A110DE
+        Device Id                                      : 0x31A110DE
+        Device Id                                      : 0x31A110DE
 root@root:~/dcgm#
