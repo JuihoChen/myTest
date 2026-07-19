@@ -1,42 +1,23 @@
-TASK [Confirm passwordless SSH works to every node] *********************************************************************************
-ok: [192.168.13.199] => (item=192.168.13.199)
-ok: [192.168.13.199] => (item=192.168.13.198)
-ok: [192.168.13.199] => (item=192.168.13.197)
-ok: [192.168.13.199] => (item=192.168.13.196)
-ok: [192.168.13.199] => (item=192.168.13.195)
-ok: [192.168.13.199] => (item=192.168.13.194)
-ok: [192.168.13.199] => (item=192.168.13.193)
-ok: [192.168.13.199] => (item=192.168.13.192)
-ok: [192.168.13.199] => (item=192.168.13.191)
-ok: [192.168.13.199] => (item=192.168.13.190)
-ok: [192.168.13.199] => (item=192.168.13.189)
-ok: [192.168.13.199] => (item=192.168.13.188)
-ok: [192.168.13.199] => (item=192.168.13.187)
-ok: [192.168.13.199] => (item=192.168.13.186)
-ok: [192.168.13.199] => (item=192.168.13.185)
-ok: [192.168.13.199] => (item=192.168.13.184)
-ok: [192.168.13.199] => (item=192.168.13.183)
-failed: [192.168.13.199] (item=192.168.13.182) => {"ansible_loop_var": "item", "changed": false, "cmd": ["ssh", "-i", "/root/.ssh/id_ed25519_mndiag", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "192.168.13.182", "echo ok"], "delta": "0:00:00.103910", "end": "2026-07-19 11:53:55.222754", "failed_when_result": true, "item": "192.168.13.182", "msg": "non-zero return code", "rc": 255, "start": "2026-07-19 11:53:55.118844", "stderr": "root@192.168.13.182: Permission denied (publickey,password).", "stderr_lines": ["root@192.168.13.182: Permission denied (publickey,password)."], "stdout": "", "stdout_lines": []}
+[gb300_rack]
+192.168.13.182
+192.168.13.183
+192.168.13.184
+192.168.13.185
+192.168.13.186
+192.168.13.187
+192.168.13.188
+192.168.13.189
+192.168.13.190
+192.168.13.191
+192.168.13.192
+192.168.13.193
+192.168.13.194
+192.168.13.195
+192.168.13.196
+192.168.13.197
+192.168.13.198
+192.168.13.199
 
-PLAY RECAP **************************************************************************************************************************
-192.168.13.182             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-192.168.13.183             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-192.168.13.184             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-192.168.13.185             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-192.168.13.186             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-192.168.13.187             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-192.168.13.188             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-192.168.13.189             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-192.168.13.190             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-192.168.13.191             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-192.168.13.192             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-192.168.13.193             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-192.168.13.194             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-192.168.13.195             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-192.168.13.196             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-192.168.13.197             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-192.168.13.198             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-192.168.13.199             : ok=6    changed=4    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
-localhost                  : ok=3    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-
-root@root:~/dcgm#
+[gb300_rack:vars]
+ansible_user=root
+ansible_become=false
