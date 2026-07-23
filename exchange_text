@@ -1,16 +1,48 @@
-root@root:~/dcgm# dcgmi mndiag --hostList "192.168.13.182;192.168.13.183" -p "mnubergemm.time_to_run=600" -j                         {
+root@root:~# dcgmi mndiag --hostList "192.168.13.154;192.168.13.153;192.168.13.152;192.168.13.151;192.168.13.150;192.168.13.149;192.168.13.148;192.168.13.147;192.168.13.146;192.168.13.145;192.168.13.144;192.168.13.143;192.168.13.142;192.168.13.141;192.168.13.140;192.168.13.139;192.168.13.138;192.168.13.137" -p "mnubergemm.time_to_run=600" -j
+{
         "DCGM Diagnostic" : "DCGM Multi-Node Diagnostic",
+        "global_errors" :
+        [
+                {
+                        "error_category" : 0,
+                        "error_id" : 44,
+                        "error_severity" : 0,
+                        "host_id" : 0,
+                        "warning" : "No hosts detected in mnubergemm output. Expected 18 host(s). Check mnubergemm logs for details."
+                }
+        ],
         "metadata" :
         {
                 "num_entities" : 0,
                 "num_hosts" : 0
         },
-        "runtime_error" : "Error: Unable to complete multi-node diagnostic on host localhost. Return: (Feature not supported) -6\n"
+        "runtime_error" : "Error: Unable to complete multi-node diagnostic on host localhost. Return: (A child process could not be spawned) -62\n",
+        "test_categories" :
+        [
+                {
+                        "category" : "Multi-Node Tests",
+                        "tests" :
+                        [
+                                {
+                                        "name" : "MNUBERGEMM",
+                                        "status" : "Fail",
+                                        "test_summary" :
+                                        {
+                                                "status" : "Fail"
+                                        }
+                                }
+                        ]
+                }
+        ]
 }
 
-root@root:~/dcgm# nvidia-smi -q | grep -i "Device Id"
-        Device Id                                      : 0x31A110DE
-        Device Id                                      : 0x31A110DE
-        Device Id                                      : 0x31A110DE
-        Device Id                                      : 0x31A110DE
-root@root:~/dcgm#
+-------------------
+Max-Q enablement — required first:
+•	GB300 Max-Q is not a supported SKU for dcgmi mndiag out of the box — on every compute tray, add the Max-Q device ID to the nv-hostengine environment and restart the service (the override persists at /etc/systemd/system/nvidia-dcgm.service.d/override.conf):
+sudo systemctl edit nvidia-dcgm.service
+  [Service]
+  Environment="DCGM_MNDIAG_SUPPORTED_SKUS=31a1"
+sudo systemctl restart nvidia-dcgm.service
+•	Then complete the cluster prep from the References doc — OpenMPI installed on all nodes and passwordless SSH between them — and launch dcgmi mndiag. Apply the SKU override before those steps.
+Example command: dcgmi mndiag --hostList "node1;node2" -p "mnubergemm.time_to_run=600"
+Expected outcome: MNUBERGEMM Test | Pass with Hosts With Errors | 0 — a clean run across all detected hosts.
