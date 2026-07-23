@@ -46,3 +46,9 @@ sudo systemctl restart nvidia-dcgm.service
 •	Then complete the cluster prep from the References doc — OpenMPI installed on all nodes and passwordless SSH between them — and launch dcgmi mndiag. Apply the SKU override before those steps.
 Example command: dcgmi mndiag --hostList "node1;node2" -p "mnubergemm.time_to_run=600"
 Expected outcome: MNUBERGEMM Test | Pass with Hosts With Errors | 0 — a clean run across all detected hosts.
+
+--------
+root@root:~# ls -al /usr/bin/mpirun
+lrwxrwxrwx 1 root root 39 Jun 29 04:41 /usr/bin/mpirun -> /usr/mpi/gcc/openmpi-4.1.9a1/bin/mpirun
+root@root:~#
+
