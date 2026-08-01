@@ -1,0 +1,339 @@
+---
+# mndiag.yml
+# Sets up the prerequisites for, then runs, DCGM Multi-Node Diagnostics
+# (`dcgmi mndiag`, test: mnubergemm) across the [gb300_rack] group.
+#
+# One node in the group is designated the "head node" -- it's the node
+# `dcgmi mndiag` is actually invoked on, and it orchestrates + SSHes into
+# every other node in --hostList (including itself) via MPI.
+#
+# Per NVIDIA docs (and everything we hit along the way), this requires:
+#   - Passwordless SSH from the head node to every other node, with the
+#     private key UNENCRYPTED on disk (ssh-agent will not work -- the SSH
+#     sessions are spawned by nv-hostengine, not the user's shell)
+#   - Every node's host key pre-trusted (ssh-keyscan) so the non-interactive
+#     SSH launched by MPI doesn't hang on a host-key confirmation prompt
+#   - Unique hostnames rack-wide (already fixed separately -- NOT touched by
+#     this playbook; a cloned-image duplicate-hostname issue was what
+#     originally caused OpenMPI to collapse 2 hosts into 1 mid-run)
+#   - The FULL fixed nvidia-dcgm systemd override (embedded inline below):
+#       - LimitNOFILE/LimitNOFILESoft raised to 65536 (old 1024/1000 was a
+#         leftover select()-based FD_SETSIZE workaround; EVENT_NOSELECT=1
+#         already forces epoll, so 1024 just risked running out of FDs at
+#         scale instead of protecting against anything)
+#       - OMPI_MCA_orte_launch_agent pinned explicitly (orted isn't always
+#         on PATH under the restricted systemd service environment)
+#       - OMPI_MCA_btl_tcp_if_include / oob_tcp_if_include set to this
+#         rack's subnet (cluster_subnet var below -- change this one line,
+#         or pass -e cluster_subnet=..., if the rack is ever re-IP'd)
+#   - IMEX channels configured AND the channel device node actually present
+#     (/dev/nvidia-caps-imex-channels/channel0) -- "nvidia-imex active" in
+#     systemctl does NOT guarantee this; this was the root cause of the
+#     NCCL "unhandled system error" / ncclCommInitRankConfig failures.
+#     channel0 is expected to be MISSING after a reboot (it's not a
+#     persistent /dev entry), so this playbook now self-heals it: polls
+#     /proc/devices for the nvidia-caps-imex-channels major number, then
+#     mknod's channel0 back (imex_wait_attempts / imex_wait_sleep below
+#     control how long it polls before giving up). Only fails the play if
+#     the device is still missing after that attempt.
+#   - Identical NVIDIA driver version across all nodes
+#
+# Usage:
+#   ansible-playbook -i hosts.ini mndiag.yml --forks 18
+#   ansible-playbook -i hosts.ini mndiag.yml --forks 18 -e mndiag_duration=300
+#   ansible-playbook -i hosts.ini mndiag.yml --forks 18 -e mndiag_head=192.168.43.154
+#   ansible-playbook -i hosts.ini mndiag.yml --forks 18 -e cluster_subnet=192.168.32.0/24
+#
+# NOTE: cluster_subnet is used in TWO places -- the OMPI TCP/OOB MCA
+# restriction (override.conf play) AND the SSH config Host-pattern (SSH
+# keypair play), so it only needs to be passed ONCE via -e for a
+# different-subnet site; it's not tied to mndiag_head, which just picks
+# which node in --hostList acts as orchestrator (defaults to the first
+# host in [gb300_rack] if not given).
+- name: Deploy fixed nvidia-dcgm systemd override across the rack
+  hosts: gb300_rack
+  gather_facts: false
+  vars:
+    cluster_subnet: "192.168.43.0/24"   # override with -e cluster_subnet=... if this rack is re-IP'd
+    orted_path: "/usr/mpi/gcc/openmpi-4.1.9a1/bin/orted"
+    mndiag_supported_skus: "31a1"
+    imex_wait_attempts: 10   # how many times to poll /proc/devices while nvidia-imex finishes registering the major number
+    imex_wait_sleep: 1       # seconds between polls
+  tasks:
+    - name: Ensure systemd override directory exists for nvidia-dcgm
+      file:
+        path: /etc/systemd/system/nvidia-dcgm.service.d
+        state: directory
+        mode: "0755"
+
+    - name: Apply full fixed override.conf for nvidia-dcgm service
+      copy:
+        dest: /etc/systemd/system/nvidia-dcgm.service.d/override.conf
+        content: |
+          [Service]
+          # File descriptor limits.
+          # Raised from the original 1024/1000 -- that was a leftover
+          # select()-based FD_SETSIZE workaround; EVENT_NOSELECT=1 below
+          # already forces epoll, so 1024 just risks running out of FDs
+          # at scale instead of protecting against anything.
+          LimitNOFILE=65536
+          LimitNOFILESoft=65536
+
+          RuntimeDirectory=nvidia-dcgm-work
+          RuntimeDirectoryMode=0777
+          WorkingDirectory=/run/nvidia-dcgm-work
+          Environment="DCGM_HOME_DIR=/run/nvidia-dcgm-work"
+          Environment="DCGM_MNDIAG_SUPPORTED_SKUS={{ mndiag_supported_skus }}"
+
+          # Force 4 GPUs per node for GB300 L10 (ranks 0-3 only)
+          Environment="OMPI_MCA_rmaps_base_n_per_node=4"
+
+          # Standard system paths
+          Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          Environment="LD_LIBRARY_PATH=/usr/local/cuda/lib64"
+
+          # Pin orted explicitly -- under the restricted systemd service
+          # environment, PATH lookup for orted can fail even when it works
+          # fine interactively. Confirm this path/version matches every node.
+          Environment="OMPI_MCA_orte_launch_agent={{ orted_path }}"
+
+          # Bypass select() in favor of epoll
+          Environment="EVENT_NOSELECT=1"
+          Environment="OMPI_MCA_opal_event_include=epoll"
+
+          # System OpenMPI MCA Overrides (Multi-Node Subnet {{ cluster_subnet }})
+          Environment="OMPI_ALLOW_RUN_AS_ROOT=1"
+          Environment="OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1"
+          Environment="OMPI_MCA_schizo=ompi"
+          Environment="OMPI_MCA_pml=ob1"
+          Environment="OMPI_MCA_btl=self,vader,tcp"
+          Environment="OMPI_MCA_btl_tcp_if_include={{ cluster_subnet }}"
+          Environment="OMPI_MCA_oob_tcp_if_include={{ cluster_subnet }}"
+          Environment="OMPI_MCA_coll_hcoll_enable=0"
+        mode: "0644"
+      notify: restart nvidia-dcgm and imex
+
+    - meta: flush_handlers
+
+    - name: Wait for nv-hostengine API to actually accept connections (systemd 'active' fires before the listener is ready)
+      command: dcgmi discovery -l
+      register: dcgm_ready
+      changed_when: false
+      retries: 10
+      delay: 3
+      until: dcgm_ready.rc == 0
+
+    - name: Check IMEX channel device exists (systemctl 'active' alone is not sufficient)
+      stat:
+        path: /dev/nvidia-caps-imex-channels/channel0
+      register: imex_channel
+
+    - name: Recreate IMEX channel0 device node if missing (expected after a reboot -- /dev entries for it aren't persistent)
+      shell: |
+        set -euo pipefail
+        if [[ ! -e /dev/nvidia-caps-imex-channels/channel0 ]]; then
+          echo "  [$(hostname)] channel0 missing (lost on last reboot, as expected) -- recreating..."
+          MAJOR=""
+          for attempt in $(seq 1 {{ imex_wait_attempts }}); do
+            MAJOR=$(awk '/nvidia-caps-imex-channels/ {print $1}' /proc/devices)
+            [[ -n "$MAJOR" ]] && break
+            sleep {{ imex_wait_sleep }}
+          done
+          if [[ -z "$MAJOR" ]]; then
+            echo "ERROR: nvidia-caps-imex-channels major number never appeared in /proc/devices on $(hostname)" >&2
+            exit 1
+          fi
+          mkdir -p /dev/nvidia-caps-imex-channels
+          rm -f /dev/nvidia-caps-imex-channels/channel0
+          mknod /dev/nvidia-caps-imex-channels/channel0 c "$MAJOR" 0
+          chmod 0666 /dev/nvidia-caps-imex-channels/channel0
+        fi
+        test -e /dev/nvidia-caps-imex-channels/channel0 || { echo "ERROR: channel0 still missing on $(hostname)" >&2; exit 1; }
+      args:
+        executable: /bin/bash
+      register: imex_recreate
+      changed_when: "'recreating' in imex_recreate.stdout"
+      when: not imex_channel.stat.exists
+
+    - name: Re-check IMEX channel device after recreation attempt
+      stat:
+        path: /dev/nvidia-caps-imex-channels/channel0
+      register: imex_channel_after
+
+    - name: Fail loudly if IMEX channel device is still missing after recreation attempt
+      fail:
+        msg: "IMEX channel device /dev/nvidia-caps-imex-channels/channel0 still missing on {{ inventory_hostname }} after recreation attempt -- mndiag will fail with NCCL 'unhandled system error' at ncclCommInitRankConfig. Check nvidia-imex service/driver state on this node."
+      when: not imex_channel_after.stat.exists
+
+  handlers:
+    - name: restart nvidia-dcgm and imex
+      systemd:
+        name: "{{ item }}"
+        daemon_reload: true
+        state: restarted
+      loop:
+        - nvidia-dcgm
+        - nvidia-imex
+
+- name: Determine head node
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Set head node (first host in group unless overridden with -e mndiag_head=...)
+      set_fact:
+        resolved_head: "{{ mndiag_head | default(groups['gb300_rack'][0]) }}"
+
+    - name: Add resolved head node to a dedicated group for targeting
+      add_host:
+        name: "{{ resolved_head }}"
+        groups: mndiag_head_group
+
+    - name: Report head node choice
+      debug:
+        msg: "mndiag head node: {{ resolved_head }} (override with -e mndiag_head=<ip>)"
+
+- name: Generate SSH keypair on head node (if not already present)
+  hosts: mndiag_head_group
+  gather_facts: false
+  vars:
+    mndiag_key_path: /root/.ssh/id_ed25519_mndiag
+    cluster_subnet: "192.168.43.0/24"   # keep in sync with the value used in the override.conf play above
+    # Turns "192.168.43.0/24" into an SSH Host-pattern wildcard "192.168.43.*"
+    ssh_host_pattern: "{{ cluster_subnet.split('.')[0:3] | join('.') }}.*"
+  tasks:
+    - name: Check if mndiag SSH key already exists
+      stat:
+        path: "{{ mndiag_key_path }}"
+      register: existing_key
+
+    - name: Generate ed25519 keypair for mndiag (unencrypted, as required for non-interactive SSH)
+      command: "ssh-keygen -t ed25519 -N '' -f {{ mndiag_key_path }}"
+      when: not existing_key.stat.exists
+
+    - name: Read the generated public key
+      command: "cat {{ mndiag_key_path }}.pub"
+      register: mndiag_pubkey
+      changed_when: false
+
+    - name: Ensure SSH config uses this key by default for rack IPs
+      blockinfile:
+        path: /root/.ssh/config
+        create: true
+        mode: "0600"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - mndiag identity"
+        block: |
+          Host {{ ssh_host_pattern }}
+            IdentityFile {{ mndiag_key_path }}
+            StrictHostKeyChecking accept-new
+
+- name: Distribute head node's public key to all rack nodes
+  hosts: gb300_rack
+  gather_facts: false
+  tasks:
+    - name: Authorize head node's mndiag public key
+      authorized_key:
+        user: root
+        key: "{{ hostvars[groups['mndiag_head_group'][0]].mndiag_pubkey.stdout }}"
+        state: present
+
+- name: Pre-trust all node host keys on the head node (avoid interactive SSH prompts)
+  hosts: mndiag_head_group
+  gather_facts: false
+  tasks:
+    - name: Scan and add all rack node host keys to known_hosts
+      known_hosts:
+        name: "{{ item }}"
+        key: "{{ lookup('pipe', 'ssh-keyscan -t ed25519 ' + item + ' 2>/dev/null') }}"
+        path: /root/.ssh/known_hosts
+      loop: "{{ groups['gb300_rack'] }}"
+      failed_when: false
+
+- name: Verify prerequisites on head node
+  hosts: mndiag_head_group
+  gather_facts: false
+  vars:
+    mndiag_key_path: /root/.ssh/id_ed25519_mndiag
+  tasks:
+    - name: Confirm passwordless SSH works to every node
+      command: "ssh -i {{ mndiag_key_path }} -o BatchMode=yes -o ConnectTimeout=5 {{ item }} 'echo ok'"
+      register: ssh_check
+      changed_when: false
+      failed_when: ssh_check.stdout != "ok"
+      loop: "{{ groups['gb300_rack'] }}"
+
+    - name: Confirm mpirun is available
+      command: which mpirun
+      register: mpirun_check
+      changed_when: false
+      failed_when: false
+
+    - name: Warn if mpirun is missing
+      debug:
+        msg: "WARNING: mpirun not found on head node -- OpenMPI may not have installed correctly with the multinode package."
+      when: mpirun_check.rc != 0
+
+    - name: Check DCGM_MNDIAG_MPIRUN_PATH is configured for nv-hostengine
+      shell: "systemctl show nvidia-dcgm -p Environment | grep -o 'DCGM_MNDIAG_MPIRUN_PATH=[^ ]*' || true"
+      register: mpirun_env_check
+      changed_when: false
+
+    - name: Warn if DCGM_MNDIAG_MPIRUN_PATH is not set
+      debug:
+        msg: "WARNING: DCGM_MNDIAG_MPIRUN_PATH not found in nvidia-dcgm environment -- mndiag may fail to launch mpirun. See NVIDIA multi-node diagnostics docs to set it manually if needed."
+      when: mpirun_env_check.stdout | length == 0
+
+- name: Run DCGM Multi-Node Diagnostics (mndiag / mnubergemm)
+  hosts: mndiag_head_group
+  gather_facts: false
+  vars:
+    mndiag_duration: 600   # seconds; NVIDIA default is 3600 (1 hour) if unset
+  tasks:
+    - name: Build semicolon-separated host list
+      set_fact:
+        mndiag_host_list: "{{ groups['gb300_rack'] | join(';') }}"
+
+    - name: Report the command about to run
+      debug:
+        msg: "Running: dcgmi mndiag --hostList \"{{ mndiag_host_list }}\" -p \"mnubergemm.time_to_run={{ mndiag_duration }}\" -j"
+
+    - name: Run dcgmi mndiag across the rack (this can take up to {{ mndiag_duration }}s + ~60s overhead)
+      command: >
+        dcgmi mndiag
+        --hostList "{{ mndiag_host_list }}"
+        -p "mnubergemm.time_to_run={{ mndiag_duration }}"
+        -j
+      register: mndiag_result
+      changed_when: false
+      failed_when: false
+
+    - name: Save raw JSON output
+      copy:
+        content: "{{ mndiag_result.stdout }}"
+        dest: "/tmp/mndiag-result.json"
+
+    - name: Report exit code
+      debug:
+        msg: "dcgmi mndiag exit code: {{ mndiag_result.rc }}"
+
+    - name: Show stderr if it failed
+      debug:
+        var: mndiag_result.stderr
+      when: mndiag_result.rc != 0
+
+- name: Fetch mndiag results back to control node
+  hosts: mndiag_head_group
+  gather_facts: false
+  tasks:
+    - name: Fetch JSON result
+      fetch:
+        src: /tmp/mndiag-result.json
+        dest: "./mndiag-results/mndiag-result.json"
+        flat: true
+
+- name: Summary
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Print summary location
+      debug:
+        msg: "mndiag run complete. Result saved to ./mndiag-results/mndiag-result.json. Review 'Hosts With Errors' and per-host/per-GPU Pass/Fail in that file."
