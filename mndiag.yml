@@ -36,6 +36,14 @@
 #     mknod's channel0 back (imex_wait_attempts / imex_wait_sleep below
 #     control how long it polls before giving up). Only fails the play if
 #     the device is still missing after that attempt.
+#   - nvidia-dcgm.service actually running (not just "config deployed") --
+#     the previous version only (re)started the service via a handler tied
+#     to override.conf changing, so a service that was independently
+#     stopped/crashed/never-started would NOT get started, and would
+#     surface later as a confusing "feature not supported" failure rather
+#     than a clear "service down" error. This playbook now unconditionally
+#     ensures nvidia-dcgm + nvidia-imex are enabled and started, regardless
+#     of whether override.conf's content actually changed.
 #   - Identical NVIDIA driver version across all nodes
 #
 # Usage:
@@ -114,6 +122,19 @@
       notify: restart nvidia-dcgm and imex
 
     - meta: flush_handlers
+
+    - name: Ensure nvidia-dcgm is enabled and running (independent of whether override.conf changed above -- covers the case where the service was stopped/crashed/never started, which otherwise surfaces later as a confusing "feature not supported" failure)
+      systemd:
+        name: nvidia-dcgm
+        enabled: true
+        state: started
+        daemon_reload: true
+
+    - name: Ensure nvidia-imex is enabled and running
+      systemd:
+        name: nvidia-imex
+        enabled: true
+        state: started
 
     - name: Wait for nv-hostengine API to actually accept connections (systemd 'active' fires before the listener is ready)
       command: dcgmi discovery -l
